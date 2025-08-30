@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Apuestas con Firebase</title>
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+    <div id="auth-status" class="auth-status">Conectando...</div> <div class="container">
+        <main class="main-content"> <div class="card">
+                <div class="card-header">Partidos Disponibles</div>
+                <div class="match-adder">
+                    <select id="match-selector"></select>
+                    <button id="add-match-btn">Añadir Partido</button>
+                </div>
+                <div id="matches-container"></div>
+            </div>
+            <div class="card history-card" style="margin-top: 20px;"> <div class="card-header">Historial de Apuestas</div>
+                <ul id="history-list"></ul>
+            </div>
+        </main>
+
+        <aside class="user-panel">
+            <div class="card">
+                <div class="card-header">Mi Saldo</div>
+                <div id="balance-amount" class="balance">S/ 0.00</div>
+                <div id="user-email" style="text-align: center; color: #666; margin-top: 10px; font-weight: bold;"></div>
+                <button id="logout-btn" class="auth-button danger-button" style="margin-top: 15px;">Cerrar Sesión</button> <button id="reset-balance" class="auth-button secondary-button">Reiniciar Saldo</button> </div>
+            <div id="bet-slip" class="card">
+                <div class="card-header">Cupón de Apuesta</div>
+                <div id="slip-content">
+                    <p></p>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script src="script.js" defer></script>
+</body>
+</html>
