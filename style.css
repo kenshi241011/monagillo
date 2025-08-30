@@ -1,55 +1,104 @@
-/* Estilos Generales y Diseño (sin cambios) */
+/* VARIABLES CSS */
 :root {
-    --primary-color: #0d6efd;
-    --success-color: #198754;
-    --danger-color: #dc3545;
+    --primary-color: #0d6efd; /* Azul */
+    --success-color: #198754; /* Verde */
+    --danger-color: #dc3545; /* Rojo */
+    --secondary-color: #6c757d; /* Gris */
     --light-gray: #f8f9fa;
     --dark-gray: #343a40;
+    --border-color: #dee2e6;
+    --background-color: #e9ecef;
+    --card-bg: white;
+    --card-shadow: 0 4px 8px rgba(0,0,0,0.1);
     --border-radius: 8px;
+    --spacing-md: 20px;
+    --spacing-sm: 10px;
 }
+
+/* ESTILOS GENERALES Y RESET BÁSICO */
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background-color: #e9ecef;
+    background-color: var(--background-color);
     color: var(--dark-gray);
     margin: 0;
-    padding: 20px;
+    padding: var(--spacing-md);
     display: flex;
     justify-content: center;
+    min-height: 100vh; /* Asegura que ocupe toda la altura */
+    box-sizing: border-box; /* Incluye padding en el tamaño total */
 }
+
+/* CONTENEDOR PRINCIPAL DE LA APLICACIÓN */
 .container {
     width: 100%;
     max-width: 1200px;
     display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 20px;
+    grid-template-columns: 2fr 1fr; /* 2/3 para el contenido principal, 1/3 para el panel de usuario */
+    gap: var(--spacing-md);
 }
+
+/* TARJETAS GENERALES */
 .card {
-    background-color: white;
+    background-color: var(--card-bg);
     border-radius: var(--border-radius);
-    padding: 20px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    padding: var(--spacing-md);
+    box-shadow: var(--card-shadow);
+    margin-bottom: var(--spacing-md); /* Espacio entre tarjetas, útil en móvil */
 }
+
 .card-header {
     font-size: 1.5em;
     font-weight: bold;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #dee2e6;
-    padding-bottom: 10px;
+    margin-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: var(--spacing-sm);
 }
 
-/* NUEVOS ESTILOS PARA EL SELECTOR DE PARTIDOS */
+/* ESTADO DE AUTENTICACIÓN (barra superior) */
+.auth-status {
+    display: none;
+    text-align: center;
+    padding: var(--spacing-sm);
+    background-color: var(--dark-gray);
+    color: white;
+    font-weight: bold;
+    margin-bottom: var(--spacing-md);
+    border-radius: var(--border-radius);
+    max-width: 1200px; /* Alineado con el contenedor principal */
+    width: 100%;
+    box-sizing: border-box;
+}
+/* Asegura que la barra de estado se alinee si el body tiene padding */
+body > .auth-status {
+    position: sticky;
+    top: var(--spacing-md);
+    z-index: 10;
+}
+body {
+    flex-direction: column; /* Cambia el flujo a columna para que auth-status pueda ser un elemento hermano */
+    align-items: center; /* Centra los elementos */
+}
+/* Ajuste para que el contenedor principal esté bajo auth-status */
+.container {
+    margin-top: 0;
+}
+
+
+/* SECCIÓN DE AÑADIR PARTIDOS */
 .match-adder {
     display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 20px;
+    flex-wrap: wrap; /* Permite que los elementos se envuelvan en pantallas pequeñas */
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: var(--spacing-md);
 }
 .match-adder select {
-    flex-grow: 1; /* Ocupa el espacio disponible */
+    flex-grow: 1;
     padding: 10px;
     border-radius: 5px;
     border: 1px solid #ccc;
+    min-width: 150px; /* Para que no se haga muy pequeño en móvil */
 }
 .match-adder button {
     padding: 10px 15px;
@@ -59,17 +108,18 @@ body {
     border-radius: 5px;
     cursor: pointer;
     font-weight: bold;
+    flex-shrink: 0; /* Evita que el botón se encoja */
 }
-/* FIN DE NUEVOS ESTILOS */
 
+/* ESTILOS DE PARTIDOS INDIVIDUALES */
 .match {
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     margin-bottom: 15px;
     padding: 15px;
     transition: box-shadow 0.2s ease;
 }
-.match:hover{
+.match:hover {
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 .match-teams {
@@ -80,8 +130,8 @@ body {
 }
 .odds-buttons {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(3, 1fr); /* 3 columnas iguales */
+    gap: var(--spacing-sm);
 }
 .odds-buttons button {
     background-color: var(--light-gray);
@@ -90,6 +140,10 @@ body {
     border-radius: 5px;
     cursor: pointer;
     transition: background-color 0.2s, color 0.2s;
+    font-size: 0.9em; /* Ajusta el tamaño de la fuente para que quepa bien */
+    white-space: nowrap; /* Evita saltos de línea dentro del botón */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Añade puntos suspensivos si el texto es muy largo */
 }
 .odds-buttons button:hover {
     background-color: #ddd;
@@ -99,29 +153,43 @@ body {
     color: white;
     font-weight: bold;
 }
+
+/* PANEL LATERAL DEL USUARIO */
 .user-panel {
-    position: sticky;
-    top: 20px;
+    position: sticky; /* Se mantiene visible al hacer scroll */
+    top: var(--spacing-md);
+    align-self: start; /* Se alinea al inicio de la cuadrícula */
 }
 .balance {
     font-size: 1.8em;
     font-weight: bold;
     color: var(--success-color);
     text-align: center;
+    margin-bottom: var(--spacing-sm);
 }
-#reset-balance { /* Estilo añadido para consistencia */
+
+/* BOTONES GENERALES DE ACCIÓN */
+.auth-button {
     width: 100%;
-    margin-top: 10px;
-    padding: 8px;
-    background-color: #6c757d;
-    color: white;
+    padding: 12px;
+    font-size: 1.1em;
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    margin-bottom: var(--spacing-sm); /* Espacio entre botones */
+}
+.auth-button.danger-button {
+    background-color: var(--danger-color);
+    color: white;
+}
+.auth-button.secondary-button {
+    background-color: var(--secondary-color);
+    color: white;
 }
 
+/* CUPÓN DE APUESTA */
 #bet-slip {
-    margin-top: 20px;
+    margin-top: 0; /* Ya tiene margin-bottom de la clase .card */
 }
 #slip-content .bet-info {
     font-size: 1em;
@@ -140,18 +208,18 @@ body {
 #bet-slip input {
     width: 100%;
     padding: 10px;
-    margin-top: 10px;
-    margin-bottom: 10px;
+    margin-top: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
     border: 1px solid #ccc;
     border-radius: 5px;
     box-sizing: border-box;
 }
 #bet-slip button {
-    width: 100%;
-    padding: 12px;
-    font-size: 1.1em;
     background-color: var(--success-color);
     color: white;
+    padding: 12px;
+    font-size: 1.1em;
+    width: 100%; /* Asegura que el botón ocupe todo el ancho */
     border: none;
     border-radius: 5px;
     cursor: pointer;
@@ -161,6 +229,7 @@ body {
     cursor: not-allowed;
 }
 
+/* HISTORIAL DE APUESTAS */
 #history-list {
     list-style-type: none;
     padding: 0;
@@ -176,9 +245,11 @@ body {
     justify-content: space-between;
     align-items: center;
     font-weight: bold;
+    flex-wrap: wrap; /* Permite que el contenido se envuelva en móvil */
 }
 .history-outcome {
     font-weight: bold;
+    white-space: nowrap; /* Evita que el resultado se rompa */
 }
 .history-outcome.won { color: var(--success-color); }
 .history-outcome.lost { color: var(--danger-color); }
@@ -192,66 +263,51 @@ body {
     border: none;
     padding: 2px 0;
 }
-@media (max-width: 900px) {
-    .container {
-        grid-template-columns: 1fr;
-    }
-    .user-panel {
-        position: static;
-    }
-}
-/* ... (todos tus estilos anteriores) ... */
 
-/* NUEVOS ESTILOS PARA LAS PÁGINAS DE LOGIN Y REGISTRO */
+/* ESTILOS PARA LAS PÁGINAS DE LOGIN/REGISTRO */
+/* ESTILOS PARA LAS PÁGINAS DE LOGIN/REGISTRO */
 .auth-body {
     display: flex;
     align-items: center;
     justify-content: center;
     height: 100vh;
+    padding: var(--spacing-md);
+    
+    /* --- ESTILOS PARA EL FONDO DE IMAGEN --- */
+    background-image: url('monagillo.jpeg'); /* Asegúrate que el nombre de archivo sea correcto */
+    background-size: cover; /* Cubre todo el área sin dejar espacios */
+    background-position: center center; /* Centra la imagen */
+    background-repeat: no-repeat; /* Evita que la imagen se repita */
+    background-attachment: fixed; /* Mantiene la imagen fija al hacer scroll (opcional, pero mejora la estética) */
+    /* --- FIN ESTILOS FONDO DE IMAGEN --- */
+
+    /* Puedes añadir un filtro oscuro para que el texto sea más legible */
+    background-color: rgba(0, 0, 0, 0.4); /* Capa semi-transparente oscura */
+    background-blend-mode: overlay; /* Mezcla la capa oscura con la imagen */
 }
 
+/* Opcional: Asegura que el contenedor de login tenga un fondo para que destaque */
+.auth-container .card {
+    background-color: rgba(255, 255, 255, 0.9); /* Fondo blanco semi-transparente para la tarjeta */
+    /* Otros estilos de la tarjeta */
+}
+.auth-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    padding: var(--spacing-md); /* Añadir padding para móvil */
+}
 .auth-container {
     width: 100%;
     max-width: 400px;
 }
-
-.form-group {
-    margin-bottom: 15px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-
-.form-group input {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    box-sizing: border-box;
-}
-
-.auth-button {
-    width: 100%;
-    padding: 12px;
-    font-size: 1.1em;
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    margin-top: 10px;
-}
-
-.auth-switch {
+.auth-message { /* Estilo para el párrafo de mensaje en login */
     text-align: center;
-    margin-top: 20px;
+    margin: 20px 0;
+    font-size: 1.1em;
+    color: #555;
 }
-/* ... (todos tus estilos anteriores) ... */
-
-/* ESTILOS PARA EL BOTÓN DE GOOGLE */
 .google-btn {
     background-color: #ffffff;
     color: #444;
@@ -259,15 +315,109 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: var(--spacing-sm);
     transition: background-color 0.3s;
 }
-
 .google-btn:hover {
     background-color: #f2f2f2;
 }
-
 .google-btn img {
     width: 20px;
     height: 20px;
+    flex-shrink: 0;
+}
+.google-btn span {
+    flex-grow: 1;
+    text-align: center;
+}
+
+
+/* ========================================================= */
+/* === MEDIA QUERIES PARA RESPONSIVIDAD === */
+/* ========================================================= */
+
+/* Para pantallas más pequeñas (tablets y celulares) */
+@media (max-width: 900px) {
+    .container {
+        grid-template-columns: 1fr; /* Una sola columna para todo */
+        gap: var(--spacing-md); /* Mantiene el espaciado entre secciones */
+    }
+
+    .user-panel {
+        position: static; /* Ya no se pega, fluye con el contenido */
+        order: -1; /* Mueve el panel del usuario arriba en móvil */
+    }
+
+    /* Ajustes para el historial si está debajo del panel de usuario */
+    .history-card {
+        margin-top: 0; /* Elimina el margen superior ya que ahora las tarjetas tienen margin-bottom por defecto */
+    }
+    
+    .auth-status {
+        position: static; /* No sticky en móvil, fluye */
+        margin-bottom: var(--spacing-md);
+        border-radius: var(--border-radius);
+    }
+    body {
+        padding: var(--spacing-sm); /* Menos padding en los bordes de la pantalla */
+    }
+
+    /* Asegurar que los botones de cuotas no se rompan el texto si es muy largo */
+    .odds-buttons button {
+        font-size: 0.85em; /* Ligeramente más pequeños */
+        padding: 8px;
+    }
+
+    /* Si el panel del usuario tiene mucho contenido, ajusta su padding */
+    .user-panel .card {
+        padding: var(--spacing-sm);
+    }
+}
+
+/* Para pantallas aún más pequeñas (principalmente celulares) */
+@media (max-width: 576px) {
+    body {
+        padding: var(--spacing-sm);
+    }
+    
+    .card {
+        padding: var(--spacing-sm);
+    }
+
+    .card-header {
+        font-size: 1.2em;
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .match-adder {
+        flex-direction: column; /* Selector y botón uno encima del otro */
+        padding-bottom: var(--spacing-sm);
+    }
+    .match-adder select,
+    .match-adder button {
+        width: 100%;
+        min-width: unset; /* Quita el mínimo ancho */
+    }
+
+    .odds-buttons {
+        grid-template-columns: 1fr; /* Una columna para cada cuota en el móvil */
+    }
+
+    .balance {
+        font-size: 1.5em;
+    }
+
+    .auth-button {
+        padding: 10px;
+        font-size: 1em;
+    }
+
+    .history-list li {
+        font-size: 0.9em;
+    }
+    .history-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
 }
