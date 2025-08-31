@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administrador</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-body">
+    <div class="auth-container">
+        <div class="card">
+            <div class="card-header">Panel de Administrador</div>
+            <div id="admin-content" class="hidden">
+                <div class="form-group">
+                    <label for="search-user-id">Buscar por ID de Usuario:</label>
+                    <input type="text" id="search-user-id">
+                    <button id="search-btn" class="auth-button secondary-button">Buscar</button>
+                </div>
+                <div id="user-info" class="hidden">
+                    <hr>
+                    <p><strong>Usuario:</strong> <span id="user-name-info"></span></p>
+                    <p><strong>Saldo Actual:</strong> S/ <span id="user-balance-info"></span></p>
+                    <div class="form-group">
+                        <label for="deposit-amount-admin">Monto a Acreditar (S/):</label>
+                        <input type="number" id="deposit-amount-admin" placeholder="Ej: 20">
+                        <button id="credit-btn" class="auth-button">Acreditar Saldo</button>
+                    </div>
+                </div>
+            </div>
+            <div id="loading-msg">Verificando permisos...</div>
+        </div>
+    </div>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>

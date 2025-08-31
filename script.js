@@ -1,17 +1,16 @@
-// Espera a que el contenido del HTML esté listo
+// script.js
+
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- PASO 1: CONFIGURACIÓN DE FIREBASE ---
-    // Asegúrate de que estos datos sean los de tu proyecto
+    // ▼▼ PEGA AQUÍ TU CONFIGURACIÓN DE FIREBASE ▼▼
     const firebaseConfig = {
-      apiKey: "AIzaSyCFfeidxVBVMgDyKdBc3qq9sqs-Ht6CLLM",
-      authDomain: "simulador-apuestas-uni.firebaseapp.com",
-      projectId: "simulador-apuestas-uni",
-      storageBucket: "simulador-apuestas-uni.firebasestorage.app",
-      messagingSenderId: "1089950371477",
-      appId: "1:1089950371477:web:3e7fdc7fa16ad8e5c6559c"
-    };
-
+  apiKey: "AIzaSyCFfeidxVBVMgDyKdBc3qq9sqs-Ht6CLLM",
+  authDomain: "simulador-apuestas-uni.firebaseapp.com",
+  projectId: "simulador-apuestas-uni",
+  storageBucket: "simulador-apuestas-uni.firebasestorage.app",
+  messagingSenderId: "1089950371477",
+  appId: "1:1089950371477:web:3e7fdc7fa16ad8e5c6559c"
+};
     // --- INICIALIZACIÓN DE FIREBASE ---
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
@@ -41,19 +40,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetBalanceBtn = document.getElementById('reset-balance');
     const matchSelectorEl = document.getElementById('match-selector');
     const addMatchBtn = document.getElementById('add-match-btn');
-    const authStatusEl = document.getElementById('auth-status');
     const userEmailEl = document.getElementById('user-email');
     const logoutBtn = document.getElementById('logout-btn');
+    const depositBtn = document.getElementById('deposit-btn');
+    const depositModal = document.getElementById('deposit-modal');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const confirmDepositBtn = document.getElementById('confirm-deposit-btn');
+    const depositAmountInput = document.getElementById('deposit-amount');
+    const userIdDisplay = document.getElementById('user-id-display');
 
     // --- GESTIÓN DE AUTENTICACIÓN ---
     auth.onAuthStateChanged(user => {
         if (user) {
             currentUser = user;
-            authStatusEl.textContent = `Conectado`;
             userEmailEl.textContent = user.displayName;
             loadData();
         } else {
-            // Si no hay usuario, lo manda a la página de login
             window.location.href = 'login.html';
         }
     });
@@ -62,39 +64,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Carga los datos del usuario (saldo e historial) desde Firestore.
-     * Si el usuario es nuevo, le asigna un saldo inicial.
+     * Si el usuario es nuevo, le asigna un saldo inicial y el rol de 'user'.
      */
-    async function loadData() {
+    function loadData() {
         if (!currentUser) return;
         const userDocRef = db.collection('users').doc(currentUser.uid);
-        try {
-            const doc = await userDocRef.get();
+
+        userDocRef.onSnapshot(doc => {
             if (doc.exists) {
                 const data = doc.data();
                 balance = data.balance;
                 betsHistory = data.history || [];
+                currentUser.role = data.role || 'user';
             } else {
-                // Si el documento no existe, es un usuario nuevo
                 balance = 1000;
                 betsHistory = [];
-                await saveData(); // Crea el documento inicial en Firestore
+                currentUser.role = 'user';
+                saveData(true); // El 'true' indica que es el setup inicial
             }
             updateUI();
-        } catch (error) {
-            console.error("Error al cargar datos:", error);
-        }
+        }, error => {
+            console.error("Error al escuchar datos en tiempo real:", error);
+        });
     }
 
     /**
      * Guarda el estado actual (saldo e historial) en el documento del usuario en Firestore.
      */
-    async function saveData() {
+    async function saveData(isInitialSetup = false) {
         if (!currentUser) return;
         const userDocRef = db.collection('users').doc(currentUser.uid);
-        await userDocRef.set({
+        const dataToSave = {
             balance: balance,
             history: betsHistory
-        });
+        };
+        if (isInitialSetup) {
+            dataToSave.role = 'user';
+        }
+        await userDocRef.set(dataToSave, { merge: true });
     }
     
     /**
@@ -318,6 +325,18 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             historyListEl.appendChild(li);
         });
+        
+        // Muestra el enlace al panel de admin si el usuario es admin
+        const adminLink = document.getElementById('admin-link');
+        if (currentUser && currentUser.role === 'admin' && !adminLink) {
+            const link = document.createElement('a');
+            link.href = 'admin.html';
+            link.textContent = 'Panel de Administrador';
+            link.id = 'admin-link';
+            link.className = 'auth-button secondary-button'; // Reutilizamos estilos
+            link.style.textDecoration = 'none';
+            logoutBtn.parentNode.insertBefore(link, logoutBtn);
+        }
     }
     
     /**
@@ -325,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     async function resetData() {
         if (confirm("¿Estás seguro de que quieres reiniciar tu saldo e historial a S/ 1,000?")) {
-            balance = 1000;
+            balance = 0;
             betsHistory = [];
             betSlipSelections = [];
             matchesContainerEl.innerHTML = '';
@@ -340,6 +359,37 @@ document.addEventListener('DOMContentLoaded', () => {
     addMatchBtn.addEventListener('click', addSelectedMatch);
     resetBalanceBtn.addEventListener('click', resetData);
     matchesContainerEl.addEventListener('click', handleOddClick);
+    
+    // Listeners para el modal de depósito
+    depositBtn.addEventListener('click', () => {
+        if (currentUser) {
+            userIdDisplay.value = currentUser.uid;
+        }
+        depositModal.classList.remove('hidden');
+    });
+
+    closeModalBtn.addEventListener('click', () => {
+        depositModal.classList.add('hidden');
+    });
+
+    confirmDepositBtn.addEventListener('click', async () => {
+        const amount = parseFloat(depositAmountInput.value);
+
+        if (isNaN(amount) || amount <= 0) {
+            alert('Por favor, ingresa un monto válido y positivo.');
+            return;
+        }
+        
+        // Esta es la simulación del usuario confirmando su propio depósito.
+        // En el flujo de admin, este botón no existiría para el usuario.
+        balance += amount;
+        await saveData();
+        updateUI();
+
+        alert(`¡Recarga exitosa! Se añadieron S/ ${amount.toFixed(2)} a tu saldo.`);
+        depositAmountInput.value = '';
+        depositModal.classList.add('hidden');
+    });
 
     // --- INICIALIZACIÓN ---
     populateMatchSelector();
