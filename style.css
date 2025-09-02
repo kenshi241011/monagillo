@@ -52,6 +52,7 @@ body {
     margin-bottom: var(--spacing-md);
     border-bottom: 1px solid var(--border-color);
     padding-bottom: var(--spacing-sm);
+    text-align: center;
 }
 
 /* ESTADO DE AUTENTICACIÓN (barra superior) */
@@ -276,7 +277,7 @@ body {
     padding: var(--spacing-md);
     
     /* --- ESTILOS PARA EL FONDO DE IMAGEN --- */
-    background-image: url('monagillo.jpeg'); /* Asegúrate que el nombre de archivo sea correcto */
+    background-image: url('eki.png'); /* Asegúrate que el nombre de archivo sea correcto */
     background-size: cover; /* Cubre todo el área sin dejar espacios */
     background-position: center center; /* Centra la imagen */
     background-repeat: no-repeat; /* Evita que la imagen se repita */
