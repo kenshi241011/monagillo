@@ -8,23 +8,27 @@ document.addEventListener('DOMContentLoaded', () => {
       messagingSenderId: "1089950371477",
       appId: "1:1089950371477:web:3e7fdc7fa16ad8e5c6559c"
     };
-    // ▲▲ ----------------------------- ▲▲
+     // ▲▲ ---------------------------------------------------- ▲▲
 
+    // --- INICIALIZACIÓN DE FIREBASE ---
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
     let currentUser = null;
 
+    // --- DATOS DEL PARTIDO POR DEFECTO ---
     const SINGLE_MATCH = {
         id: 1,
         home: "Alianza Lima",
         away: "Universitario de Deportes"
     };
 
+    // --- VARIABLES DE ESTADO ---
     let balance = 0;
     let betsHistory = [];
     let currentBet = null;
 
+    // --- ELEMENTOS DEL DOM ---
     const streamContainerEl = document.getElementById('stream-container');
     const balanceAmountEl = document.getElementById('balance-amount');
     const matchesContainerEl = document.getElementById('matches-container');
@@ -37,42 +41,59 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeModalBtn = document.getElementById('close-modal-btn');
     const userIdDisplay = document.getElementById('user-id-display');
 
+    // --- GESTIÓN DE AUTENTICACIÓN ---
     auth.onAuthStateChanged(user => {
         if (user) {
             currentUser = user;
             userEmailEl.textContent = user.displayName;
             loadData();
-            listenForLiveMatch();
+            listenForLiveMatch(); // Inicia la escucha para ver si hay un partido en vivo
         } else {
             window.location.href = 'login.html';
         }
     });
 
+    // --- LÓGICA DE TIEMPO REAL Y SIMULACIÓN ---
     function listenForLiveMatch() {
         const liveMatchRef = db.collection('liveMatch').doc('current');
         liveMatchRef.onSnapshot(doc => {
             if (streamContainerEl) streamContainerEl.innerHTML = '';
             if (matchesContainerEl) matchesContainerEl.innerHTML = '';
 
-            if (doc.exists) {
+            if (doc.exists && doc.data().streamUrl && doc.data().status === 'live') {
+                // CASO 1: HAY PARTIDO EN VIVO TRANSMITIDO POR EL ADMIN
                 const data = doc.data();
-                if (data.streamUrl && data.status === 'live') {
-                    const channelName = getChannelFromUrl(data.streamUrl);
-                    if (channelName && streamContainerEl) {
-                        streamContainerEl.innerHTML = `
-                            <iframe src="https://player.twitch.tv/?channel=${channelName}&parent=${window.location.hostname}&autoplay=false"
-                                frameborder="0" allowfullscreen="true" scrolling="no" width="100%" height="400">
-                            </iframe>`;
-                        const odds = data.odds || { '1': 1.85, 'X': 3.20, '2': 2.50 };
-                        createMatchElement(SINGLE_MATCH.id, SINGLE_MATCH.home, SINGLE_MATCH.away, odds);
-                    }
-                } else {
-                    if (streamContainerEl) streamContainerEl.innerHTML = '<p style="text-align:center; padding: 20px;">La transmisión ha finalizado.</p>';
+                const channelName = getChannelFromUrl(data.streamUrl);
+                if (channelName && streamContainerEl) {
+                    const parentDomain = "apuestas-monagilloperdido-f7706f.netlify.app"; // dominio de Netlify
+                    streamContainerEl.innerHTML = `
+                     <iframe
+                     src="https://player.twitch.tv/?channel=${channelName}&parent=${parentDomain}&autoplay=true"
+                     frameborder="0"
+                     allowfullscreen="true"
+                     scrolling="no"
+                        width="100%"
+                        height="400">
+                    </iframe>`;
+                    const odds = data.odds || { '1': 1.85, 'X': 3.20, '2': 2.50 };
+                    createMatchElement(SINGLE_MATCH.id, SINGLE_MATCH.home, SINGLE_MATCH.away, odds);
                 }
             } else {
-                if (streamContainerEl) streamContainerEl.innerHTML = '<p style="text-align:center; padding: 20px;">No hay transmisión programada.</p>';
+                // CASO 2: NO HAY PARTIDO EN VIVO, SE MUESTRA EL SIMULADO
+                if (streamContainerEl) streamContainerEl.innerHTML = '<p style="text-align:center; padding: 10px; background-color: #f0f2f5; border-radius: 8px;">No hay transmisión en vivo. Puedes apostar en el siguiente partido simulado:</p>';
+                displaySingleMatch();
             }
         });
+    }
+
+    // Función para el partido simulado por defecto
+    function displaySingleMatch() {
+        const odds = {
+            '1': (Math.random() * 2 + 1.5).toFixed(2),
+            'X': (Math.random() * 1.5 + 2.8).toFixed(2),
+            '2': (Math.random() * 3 + 2.0).toFixed(2)
+        };
+        createMatchElement(SINGLE_MATCH.id, SINGLE_MATCH.home, SINGLE_MATCH.away, odds);
     }
 
     function getChannelFromUrl(url) {
@@ -82,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { return null; }
     }
 
+    // --- FUNCIONES DEL SIMULADOR ---
     function loadData() {
         if (!currentUser) return;
         const userDocRef = db.collection('users').doc(currentUser.uid);
@@ -213,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("Error al realizar la apuesta:", error);
             alert("Hubo un problema al registrar tu apuesta.");
-            balance += amount;
+            balance += amount; // Devolvemos el saldo si hay error
         }
     }
     
