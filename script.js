@@ -30,6 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentBet = null; // Para una sola apuesta
 
     // --- ELEMENTOS DEL DOM (VERSIÓN LIMPIA) ---
+    // --- ELEMENTOS DEL DOM ---
+    const streamContainerEl = document.getElementById('stream-container');
     const balanceAmountEl = document.getElementById('balance-amount');
     const matchesContainerEl = document.getElementById('matches-container');
     const slipContentEl = document.getElementById('slip-content');
@@ -41,7 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const depositModal = document.getElementById('deposit-modal');
     const closeModalBtn = document.getElementById('close-modal-btn');
     const userIdDisplay = document.getElementById('user-id-display');
-
     // --- GESTIÓN DE AUTENTICACIÓN ---
     auth.onAuthStateChanged(user => {
         if (user) {
@@ -53,6 +54,98 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = 'login.html';
         }
     });
+// --- LÓGICA DE TIEMPO REAL ---
+    function listenForLiveMatch() {
+        const liveMatchRef = db.collection('liveMatch').doc('current');
+
+        liveMatchRef.onSnapshot(doc => {
+            streamContainerEl.innerHTML = '';
+            matchesContainerEl.innerHTML = '';
+
+            if (doc.exists) {
+                const data = doc.data();
+                if (data.streamUrl && data.status === 'live') {
+                    // Si hay un stream, lo mostramos
+                    const channelName = getChannelFromUrl(data.streamUrl);
+                    if (channelName) {
+                        streamContainerEl.innerHTML = `
+                            <iframe
+                                src="https://player.twitch.tv/?channel=${channelName}&parent=${window.location.hostname}&autoplay=false"
+                                frameborder="0" allowfullscreen="true" scrolling="no" width="100%" height="400">
+                            </iframe>`;
+                        
+                        // Usamos cuotas por defecto si el admin no las define
+                        const odds = data.odds || { home: 1.85, draw: 3.20, away: 2.50 };
+                        createMatchElement(SINGLE_MATCH.id, SINGLE_MATCH.home, SINGLE_MATCH.away, odds);
+                    }
+                } else {
+                    streamContainerEl.innerHTML = '<p style="text-align:center; padding: 20px;">La transmisión en vivo ha finalizado o no está disponible.</p>';
+                }
+            } else {
+                streamContainerEl.innerHTML = '<p style="text-align:center; padding: 20px;">No hay ninguna transmisión programada en este momento.</p>';
+            }
+        });
+    }
+
+    // Pequeña función para extraer el nombre del canal de la URL de Twitch
+    function getChannelFromUrl(url) {
+        try {
+            const path = new URL(url).pathname;
+            return path.split('/').pop();
+        } catch (error) {
+            console.error("URL de Twitch inválida:", url, error);
+            return null;
+        }
+    }
+
+    // --- FUNCIONES DEL SIMULADOR ---
+
+    function loadData() {
+        if (!currentUser) return;
+        const userDocRef = db.collection('users').doc(currentUser.uid);
+        userDocRef.onSnapshot(doc => {
+            if (doc.exists) {
+                const data = doc.data();
+                balance = data.balance;
+                betsHistory = data.history || [];
+                currentUser.role = data.role || 'user';
+            } else {
+                balance = 1000;
+                betsHistory = [];
+                currentUser.role = 'user';
+                saveData(true);
+            }
+            updateUI();
+        }, error => console.error("Error al escuchar datos:", error));
+    }
+
+    async function saveData(isInitialSetup = false) {
+        if (!currentUser) return;
+        const userDocRef = db.collection('users').doc(currentUser.uid);
+        const dataToSave = {
+            balance: balance,
+            history: betsHistory
+        };
+        if (isInitialSetup) {
+            dataToSave.role = 'user';
+        }
+        await userDocRef.set(dataToSave, { merge: true });
+    }
+
+    function createMatchElement(id, home, away, odds) {
+        const matchEl = document.createElement('div');
+        matchEl.className = 'match';
+        matchEl.innerHTML = `
+            <div class="match-teams">${home} vs ${away}</div>
+            <div class="odds-buttons">
+                <button data-type="1" data-value="${odds['1'] || 0}">${home} - ${(odds['1'] || 0).toFixed(2)}</button>
+                <button data-type="X" data-value="${odds['X'] || 0}">Empate - ${(odds['X'] || 0).toFixed(2)}</button>
+                <button data-type="2" data-value="${odds['2'] || 0}">${away} - ${(odds['2'] || 0).toFixed(2)}</button>
+            </div>
+        `;
+        matchesContainerEl.appendChild(matchEl);
+    }
+    
 
     // --- FUNCIONES DEL SIMULADOR ---
 
@@ -172,6 +265,16 @@ document.addEventListener('DOMContentLoaded', () => {
             'X': parseFloat(oddsButtons[1].dataset.value),
             '2': parseFloat(oddsButtons[2].dataset.value)
         };
+        // ▼▼ AÑADIDO: Guardar la apuesta en la colección pública para el admin ▼▼
+        const liveBetRef = db.collection('liveBets').doc(); // Crea un nuevo documento con ID automático
+        await liveBetRef.set({
+            userId: currentUser.uid,
+            userName: currentUser.displayName,
+            selection: currentBet.selection,
+            amount: amount,
+            odd: currentBet.odd,
+            timestamp: new Date() // Usamos un timestamp de Firebase para ordenar
+        });
         const result = simulateMatch(odds);
         const won = currentBet.type === result.winner;
         let outcomeMessage = '';

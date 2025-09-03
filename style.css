@@ -528,3 +528,43 @@ body {
     text-align: center;
     box-sizing: border-box;
 }
+/* ... (todos tus estilos anteriores) ... */
+
+/* ========================================================= */
+/* === ESTILOS PARA EL FEED DE APUESTAS DEL ADMIN === */
+/* ========================================================= */
+#live-bets-feed {
+    margin-top: 20px;
+}
+
+#live-bets-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
+
+#live-bets-list li {
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    font-size: 0.9em;
+}
+
+#live-bets-list li:last-child {
+    border-bottom: none;
+}
+
+#live-bets-list .bet-user {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+#live-bets-list .bet-details {
+    color: #555;
+}
