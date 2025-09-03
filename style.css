@@ -568,3 +568,25 @@ body {
 #live-bets-list .bet-details {
     color: #555;
 }
+/* ========================================================= */
+/* === ESTILOS PARA LA NOTIFICACIÓN POP-UP (TOAST) === */
+/* ========================================================= */
+.toast {
+    position: fixed; /* Se mantiene fijo en la pantalla */
+    bottom: -100px; /* Comienza oculto debajo de la pantalla */
+    right: 20px;
+    background-color: var(--dark-gray);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transition: bottom 0.5s ease-in-out; /* Animación de entrada y salida */
+    z-index: 2000; /* Asegura que esté por encima de todo */
+    font-size: 1em;
+    font-weight: 500;
+}
+
+/* Clase que se añade con JavaScript para mostrar el pop-up */
+.toast.show {
+    bottom: 20px; /* Lo mueve a una posición visible */
+}
