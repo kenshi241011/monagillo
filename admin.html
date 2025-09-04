@@ -9,22 +9,39 @@
 <body class="auth-body">
     <div class="auth-container">
         <div class="card">
-            <div id="toast-notification" class="toast">
-        <div id="toast-message"></div>
-        </div>
+            <div id="toast-notification" class="toast"><div id="toast-message"></div></div>
             <div class="card-header">Panel de Administrador</div>
-            
             <div id="admin-content" class="hidden">
                 <div id="stream-control">
                     <div class="form-group">
-                        <label for="stream-url">URL del Canal de Twitch:</label>
-                        <input type="text" id="stream-url" placeholder="https://www.twitch.tv/juansguarnizo">
+                        <label for="stream-url">URL del Canal de Kick:</label>
+                        <input type="text" id="stream-url" placeholder="https://kick.com/tu_usuario">
                     </div>
                     <button id="update-stream-btn" class="auth-button">Iniciar / Actualizar Transmisión</button>
                     <button id="stop-stream-btn" class="auth-button danger-button">Finalizar Transmisión</button>
                 </div>
                 <hr style="margin: 20px 0;">
 
+                <div id="settle-bets-control">
+                    <div class="card-header">Finalizar Partido y Pagar</div>
+                    <div class="form-group">
+                        <label for="winner-selector">Selecciona el Resultado Final:</label>
+                        <select id="winner-selector">
+                            <option value="" disabled selected>-- Elige un resultado --</option>
+                            <option value="1">Gana Local</option>
+                            <option value="X">Empate</option>
+                            <option value="2">Gana Visitante</option>
+                        </select>
+                    </div>
+                    <button id="settle-bets-btn" class="auth-button success-button">Finalizar y Pagar Apuestas</button>
+                </div>
+                <hr style="margin: 20px 0;">
+                <div id="live-bets-feed">
+                    <div class="card-header">Apuestas en Tiempo Real</div>
+                    <ul id="live-bets-list"></ul>
+                </div>
+                <hr style="margin: 20px 0;">
+                
                 <div class="form-group">
                     <label for="search-user-id">Buscar por ID de Usuario:</label>
                     <input type="text" id="search-user-id">
@@ -40,17 +57,8 @@
                         <button id="credit-btn" class="auth-button">Acreditar Saldo</button>
                     </div>
                 </div>
-                <hr style="margin: 20px 0;">
-
-                <div id="live-bets-feed">
-                 <div class="card-header">Apuestas en Tiempo Real</div>
-                 <ul id="live-bets-list">
-                 </ul>
-                </div>
-                <hr style="margin: 20px 0;">
             </div>
-
-            <div id="status-message">Verificacion Exitosa</div>
+            <div id="status-message">Verificando permisos...</div>
         </div>
     </div>
     

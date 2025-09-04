@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 allowfullscreen="true" 
                                 scrolling="no">
                             </iframe>`;
-                        const odds = data.odds || { '1': 1.60, 'X': 2.00, '2': 1.40 };
+                        const odds = data.odds || { '1': 1.60, 'X': 2.00, '2': 1.50 };
                         createMatchElement(SINGLE_MATCH.id, SINGLE_MATCH.home, SINGLE_MATCH.away, odds);
                     }
                 } else {

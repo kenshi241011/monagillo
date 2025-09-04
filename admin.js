@@ -18,9 +18,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- ELEMENTOS DEL DOM ---
     const adminContent = document.getElementById('admin-content');
     const statusMessage = document.getElementById('status-message');
+    // Controles del Stream
     const streamUrlInput = document.getElementById('stream-url');
     const updateStreamBtn = document.getElementById('update-stream-btn');
     const stopStreamBtn = document.getElementById('stop-stream-btn');
+    // Controles de Búsqueda y Recarga
     const searchInput = document.getElementById('search-user-id');
     const searchBtn = document.getElementById('search-btn');
     const userInfo = document.getElementById('user-info');
@@ -28,11 +30,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const userBalanceInfo = document.getElementById('user-balance-info');
     const depositAmountAdmin = document.getElementById('deposit-amount-admin');
     const creditBtn = document.getElementById('credit-btn');
+    // Feed de Apuestas en Vivo
     const liveBetsList = document.getElementById('live-bets-list');
     const toastNotification = document.getElementById('toast-notification');
     const toastMessage = document.getElementById('toast-message');
+    // Pago Automático
+    const settleBetsBtn = document.getElementById('settle-bets-btn');
+    const winnerSelector = document.getElementById('winner-selector');
 
-    // --- REFERENCIA AL DOCUMENTO DEL PARTIDO EN VIVO ---
+
+    // --- REFERENCIAS A FIRESTORE ---
     const liveMatchRef = db.collection('liveMatch').doc('current');
 
     // --- GESTIÓN DE AUTENTICACIÓN Y PERMISOS DE ADMIN ---
@@ -62,12 +69,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- FUNCIÓN DE ESCUCHA DE APUESTAS EN TIEMPO REAL ---
     function listenForLiveBets() {
         const betsRef = db.collection('liveBets').orderBy('timestamp', 'desc');
-
         betsRef.onSnapshot(snapshot => {
-            // Lógica para la notificación pop-up
             snapshot.docChanges().forEach(change => {
                 if (change.type === 'added') {
-                    if (liveBetsList.children.length > 0 && liveBetsList.firstChild.textContent !== 'Aún no se han realizado apuestas.') {
+                    if (liveBetsList.children.length === 0 || liveBetsList.firstChild.textContent !== 'Aún no se han realizado apuestas.') {
                         const bet = change.doc.data();
                         toastMessage.innerHTML = `<strong>${bet.userName}</strong> apostó a "${bet.selection}"`;
                         toastNotification.classList.add('show');
@@ -77,8 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             });
-
-            // Lógica para mostrar la lista de apuestas
             liveBetsList.innerHTML = '';
             if (snapshot.empty) {
                 liveBetsList.innerHTML = '<li>Aún no se han realizado apuestas.</li>';
@@ -108,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateStreamBtn.addEventListener('click', () => {
         const url = streamUrlInput.value.trim();
         if (!url) {
-            alert("Por favor, ingresa la URL de tu canal de Twitch.");
+            alert("Por favor, ingresa la URL de tu canal.");
             return;
         }
         liveMatchRef.set({
@@ -127,6 +130,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }).then(() => {
             alert("¡Transmisión finalizada para todos los usuarios!");
         }).catch(error => console.error("Error al finalizar la transmisión:", error));
+    });
+
+    // Pagar apuestas automáticamente
+    settleBetsBtn.addEventListener('click', async () => {
+        const winner = winnerSelector.value;
+        if (!winner) {
+            alert("Por favor, selecciona un resultado final para el partido.");
+            return;
+        }
+        const confirmation = confirm(`¿Estás seguro de que el resultado es "${winnerSelector.options[winnerSelector.selectedIndex].text}"? Esta acción pagará todas las apuestas y no se puede deshacer.`);
+        if (!confirmation) return;
+
+        try {
+            const betsSnapshot = await db.collection('liveBets').get();
+            if (betsSnapshot.empty) {
+                alert("No hay apuestas pendientes para pagar.");
+                return;
+            }
+
+            const batch = db.batch();
+            let winnersCount = 0;
+            let totalPaid = 0;
+
+            for (const doc of betsSnapshot.docs) {
+                const bet = doc.data();
+                const userDocRef = db.collection('users').doc(bet.userId);
+
+                if (bet.type === winner) {
+                    const winnings = bet.amount * bet.odd;
+                    batch.update(userDocRef, { balance: firebase.firestore.FieldValue.increment(winnings) });
+                    winnersCount++;
+                    totalPaid += winnings;
+                }
+                batch.delete(doc.ref);
+            }
+
+            await batch.commit();
+            await liveMatchRef.update({ status: 'finished' });
+
+            alert(`¡Proceso completado!\n- Se pagaron ${winnersCount} apuestas ganadoras.\n- Monto total pagado: S/ ${totalPaid.toFixed(2)}\n- Se limpió el historial de apuestas en vivo.`);
+        } catch (error) {
+            console.error("Error al pagar las apuestas:", error);
+            alert("Ocurrió un error durante el pago automático. Revisa la consola.");
+        }
     });
     
     // Buscar un usuario por su ID
