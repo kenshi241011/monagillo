@@ -17,12 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const db = firebase.firestore();
     let currentUser = null;
 
-    // --- DATOS DEL PARTIDO Y STREAM ---
-    const KICK_CHANNEL_NAME = "kenshi2424"; // <-- YA ESTÁ CONFIGURADO TU CANAL
+    // --- DATOS DEL PARTIDO ---
     const SINGLE_MATCH = {
         id: 1,
-        home: "Alianza Lima (JORGE RAMOS)",
-        away: "Universitario de Deportes (JORGE APARCANA)"
+        home: "Alianza Lima",
+        away: "Universitario"
     };
 
     // --- VARIABLES DE ESTADO ---
@@ -68,9 +67,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     const channelName = getChannelFromUrl(data.streamUrl);
                     if (channelName && streamContainerEl) {
                         streamContainerEl.innerHTML = `
-                            <iframe src="https://player.kick.com/${channelName}" 
-                                style="border:none; width:100%; height:400px;" 
-                                allowfullscreen="true" 
+                            <iframe src="https://player.kick.com/${channelName}"
+                                style="border:none; width:100%; height:400px;"
+                                allowfullscreen="true"
                                 scrolling="no">
                             </iframe>`;
                         const odds = data.odds || { '1': 1.60, 'X': 2.00, '2': 1.50 };
@@ -103,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 betsHistory = data.history || [];
                 currentUser.role = data.role || 'user';
             } else {
-                balance = 1000;
+                balance = 0;
                 betsHistory = [];
                 currentUser.role = 'user';
                 saveData(true);
@@ -224,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("Error al realizar la apuesta:", error);
             alert("Hubo un problema al registrar tu apuesta.");
-            balance += amount; // Devolvemos el saldo
+            balance += amount; // Devolvemos el saldo si hay error
         }
     }
     

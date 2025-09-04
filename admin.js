@@ -22,7 +22,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const streamUrlInput = document.getElementById('stream-url');
     const updateStreamBtn = document.getElementById('update-stream-btn');
     const stopStreamBtn = document.getElementById('stop-stream-btn');
-    // Controles de Búsqueda y Recarga
+    // Feed de Apuestas
+    const liveBetsList = document.getElementById('live-bets-list');
+    const toastNotification = document.getElementById('toast-notification');
+    const toastMessage = document.getElementById('toast-message');
+    // Pago Automático
+    const settleBetsBtn = document.getElementById('settle-bets-btn');
+    const winnerSelector = document.getElementById('winner-selector');
+    // Búsqueda Manual de Usuario
     const searchInput = document.getElementById('search-user-id');
     const searchBtn = document.getElementById('search-btn');
     const userInfo = document.getElementById('user-info');
@@ -30,16 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const userBalanceInfo = document.getElementById('user-balance-info');
     const depositAmountAdmin = document.getElementById('deposit-amount-admin');
     const creditBtn = document.getElementById('credit-btn');
-    // Feed de Apuestas en Vivo
-    const liveBetsList = document.getElementById('live-bets-list');
-    const toastNotification = document.getElementById('toast-notification');
-    const toastMessage = document.getElementById('toast-message');
-    // Pago Automático
-    const settleBetsBtn = document.getElementById('settle-bets-btn');
-    const winnerSelector = document.getElementById('winner-selector');
 
-
-    // --- REFERENCIAS A FIRESTORE ---
+    // --- REFERENCIA AL DOCUMENTO DEL PARTIDO EN VIVO ---
     const liveMatchRef = db.collection('liveMatch').doc('current');
 
     // --- GESTIÓN DE AUTENTICACIÓN Y PERMISOS DE ADMIN ---
@@ -118,66 +117,84 @@ document.addEventListener('DOMContentLoaded', () => {
             streamUrl: url,
             status: 'live'
         }, { merge: true }).then(() => {
-            alert("¡Transmisión iniciada/actualizada para todos los usuarios!");
+            alert("¡Transmisión iniciada/actualizada!");
         }).catch(error => console.error("Error al actualizar la transmisión:", error));
     });
 
-    // Finalizar la transmisión
+    // Finalizar la transmisión (sin pagar)
     stopStreamBtn.addEventListener('click', () => {
         liveMatchRef.update({
             streamUrl: null,
             status: 'finished'
         }).then(() => {
-            alert("¡Transmisión finalizada para todos los usuarios!");
+            alert("¡Transmisión finalizada!");
         }).catch(error => console.error("Error al finalizar la transmisión:", error));
     });
 
-    // Pagar apuestas automáticamente
+    // Pagar apuestas automáticamente (LÓGICA CORREGIDA)
     settleBetsBtn.addEventListener('click', async () => {
         const winner = winnerSelector.value;
         if (!winner) {
             alert("Por favor, selecciona un resultado final para el partido.");
             return;
         }
-        const confirmation = confirm(`¿Estás seguro de que el resultado es "${winnerSelector.options[winnerSelector.selectedIndex].text}"? Esta acción pagará todas las apuestas y no se puede deshacer.`);
+        const confirmation = confirm(`¿Estás seguro de que el resultado es "${winnerSelector.options[winnerSelector.selectedIndex].text}"? Esta acción pagará las apuestas y no se puede deshacer.`);
         if (!confirmation) return;
 
         try {
+            // 1. Guardar el resultado final en el documento del partido
+            await liveMatchRef.update({
+                status: 'finished',
+                winner: winner
+            });
+
+            // 2. Obtener todas las apuestas pendientes de la colección 'liveBets'
             const betsSnapshot = await db.collection('liveBets').get();
             if (betsSnapshot.empty) {
                 alert("No hay apuestas pendientes para pagar.");
                 return;
             }
 
+            // 3. Preparar un lote para pagar a los ganadores y borrar las apuestas
             const batch = db.batch();
             let winnersCount = 0;
             let totalPaid = 0;
 
-            for (const doc of betsSnapshot.docs) {
+            betsSnapshot.forEach(doc => {
                 const bet = doc.data();
                 const userDocRef = db.collection('users').doc(bet.userId);
 
+                // Comprobar si la apuesta es ganadora
                 if (bet.type === winner) {
                     const winnings = bet.amount * bet.odd;
+                    // Preparamos la actualización del saldo del ganador
                     batch.update(userDocRef, { balance: firebase.firestore.FieldValue.increment(winnings) });
                     winnersCount++;
                     totalPaid += winnings;
                 }
+                // Preparamos la eliminación de la apuesta de 'liveBets', sea ganadora o no
                 batch.delete(doc.ref);
-            }
+            });
 
+            // 4. Ejecutar todas las operaciones a la vez
             await batch.commit();
-            await liveMatchRef.update({ status: 'finished' });
 
             alert(`¡Proceso completado!\n- Se pagaron ${winnersCount} apuestas ganadoras.\n- Monto total pagado: S/ ${totalPaid.toFixed(2)}\n- Se limpió el historial de apuestas en vivo.`);
+
         } catch (error) {
             console.error("Error al pagar las apuestas:", error);
-            alert("Ocurrió un error durante el pago automático. Revisa la consola.");
+            alert("Ocurrió un error durante el pago automático. Revisa la consola y las reglas de seguridad de Firestore.");
         }
     });
     
     // Buscar un usuario por su ID
-    searchBtn.addEventListener('click', async () => {
+    searchBtn.addEventListener('click', async () => { /* (Sin cambios) */ });
+
+    // Acreditar saldo a un usuario
+    creditBtn.addEventListener('click', async () => { /* (Sin cambios) */ });
+
+    // --- Bloques de código sin cambios (copiados para que esté completo) ---
+    async function searchUser() {
         const userIdToFind = searchInput.value.trim();
         if (!userIdToFind) {
             alert("Por favor, ingresa un ID de usuario.");
@@ -198,19 +215,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error("Error al buscar usuario:", error);
-            alert("Ocurrió un error al buscar. Revisa las reglas de seguridad y la consola.");
+            alert("Ocurrió un error al buscar.");
         }
-    });
+    }
+    searchBtn.addEventListener('click', searchUser);
 
-    // Acreditar saldo a un usuario
-    creditBtn.addEventListener('click', async () => {
+    async function creditBalance() {
         if (!searchedUser) {
             alert("Primero busca y encuentra un usuario válido.");
             return;
         }
         const amount = parseFloat(depositAmountAdmin.value);
         if (isNaN(amount) || amount <= 0) {
-            alert("Monto inválido. Ingresa un número positivo.");
+            alert("Monto inválido.");
             return;
         }
         const currentBalance = searchedUser.balance || 0;
@@ -218,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const userDocRef = db.collection('users').doc(searchedUser.id);
         try {
             await userDocRef.update({ balance: newBalance });
-            alert(`¡Saldo acreditado! Nuevo saldo para el usuario es S/ ${newBalance.toFixed(2)}`);
+            alert(`¡Saldo acreditado! Nuevo saldo es S/ ${newBalance.toFixed(2)}`);
             userBalanceInfo.textContent = newBalance.toFixed(2);
             searchedUser.balance = newBalance;
             depositAmountAdmin.value = '';
@@ -226,5 +243,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Error al acreditar saldo:", error);
             alert("Hubo un error al actualizar el saldo.");
         }
-    });
+    }
+    creditBtn.addEventListener('click', creditBalance);
 });
