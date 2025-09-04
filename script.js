@@ -21,8 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const KICK_CHANNEL_NAME = "kenshi2424"; // <-- YA ESTÁ CONFIGURADO TU CANAL
     const SINGLE_MATCH = {
         id: 1,
-        home: "Alianza Lima",
-        away: "Universitario de Deportes"
+        home: "Alianza Lima (JORGE RAMOS)",
+        away: "Universitario de Deportes (JORGE APARCANA)"
     };
 
     // --- VARIABLES DE ESTADO ---
@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 allowfullscreen="true" 
                                 scrolling="no">
                             </iframe>`;
-                        const odds = data.odds || { '1': 1.85, 'X': 3.20, '2': 2.50 };
+                        const odds = data.odds || { '1': 1.70, 'X': 2.00, '2': 1.40 };
                         createMatchElement(SINGLE_MATCH.id, SINGLE_MATCH.home, SINGLE_MATCH.away, odds);
                     }
                 } else {
