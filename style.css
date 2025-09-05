@@ -590,3 +590,35 @@ body {
 .toast.show {
     bottom: 20px; /* Lo mueve a una posición visible */
 }
+/* ... (todos tus estilos anteriores) ... */
+
+/* ========================================================= */
+/* === ESTILOS PARA EL CUPÓN DE APUESTAS COMBINADAS === */
+/* ========================================================= */
+
+#slip-content .bet-info-item {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9em;
+}
+
+#slip-content .bet-info-item:last-of-type {
+    border-bottom: none;
+}
+
+#slip-content .bet-info-item p {
+    margin: 2px 0;
+    color: #333;
+}
+
+#slip-content .bet-info-item .selection-name {
+    font-weight: bold;
+}
+
+#slip-summary {
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-top: 2px solid var(--border-color);
+    border-bottom: 2px solid var(--border-color);
+    margin: 10px 0;
+}

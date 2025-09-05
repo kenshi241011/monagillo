@@ -120,11 +120,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const odds = {
-            '1': parseFloat(liveOdd1Input.value) || 1.60,
-            'X': parseFloat(liveOddXInput.value) || 2.00,
-            '2': parseFloat(liveOdd2Input.value) || 1.70,
-            'fg1': parseFloat(liveOddFg1Input.value) || 1.30,
-            'fg2': parseFloat(liveOddFg2Input.value) || 1.20
+            '1': parseFloat(liveOdd1Input.value) || 1.85,
+            'X': parseFloat(liveOddXInput.value) || 3.20,
+            '2': parseFloat(liveOdd2Input.value) || 2.50,
+            'fg1': parseFloat(liveOddFg1Input.value) || 1.90,
+            'fg2': parseFloat(liveOddFg2Input.value) || 1.90
         };
 
         liveMatchRef.set({
@@ -180,14 +180,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 const userDocRef = db.collection('users').doc(bet.userId);
 
                 let isWinner = false;
-                if ((bet.type === '1' || bet.type === 'X' || bet.type === '2') && bet.type === winner) {
-                    isWinner = true;
-                } else if ((bet.type === 'fg1' || bet.type === 'fg2') && bet.type === firstGoalWinner) {
-                    isWinner = true;
+                if (bet.selections) { // Lógica para apuestas combinadas
+                    let allSelectionsCorrect = true;
+                    for (const selection of bet.selections) {
+                        let isSelectionCorrect = false;
+                        if ((selection.type === '1' || selection.type === 'X' || selection.type === '2') && selection.type === winner) {
+                            isSelectionCorrect = true;
+                        } else if ((selection.type === 'fg1' || selection.type === 'fg2') && selection.type === firstGoalWinner) {
+                            isSelectionCorrect = true;
+                        }
+                        if (!isSelectionCorrect) {
+                            allSelectionsCorrect = false;
+                            break;
+                        }
+                    }
+                    if (allSelectionsCorrect) isWinner = true;
+                } else { // Lógica para apuestas simples (compatibilidad)
+                    if ((bet.type === '1' || bet.type === 'X' || bet.type === '2') && bet.type === winner) {
+                        isWinner = true;
+                    } else if ((bet.type === 'fg1' || bet.type === 'fg2') && bet.type === firstGoalWinner) {
+                        isWinner = true;
+                    }
                 }
                 
                 if (isWinner) {
-                    const winnings = bet.amount * bet.odd;
+                    const winnings = bet.amount * (bet.totalOdd || bet.odd);
                     batch.update(userDocRef, { balance: firebase.firestore.FieldValue.increment(winnings) });
                     winnersCount++;
                     totalPaid += winnings;
