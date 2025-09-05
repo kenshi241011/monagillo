@@ -14,12 +14,16 @@
         <main>
             <div class="card">
                 <div class="card-header">Partido en Vivo</div>
-                <div id="stream-container"></div>
+                <div id="stream-container">
+                    <p style="text-align:center; padding: 20px;">Cargando transmisión...</p>
+                </div>
                 <div id="matches-container"></div>
             </div>
             <div class="card" style="margin-top: 20px;">
                 <div class="card-header">Historial de Apuestas</div>
-                <ul id="history-list"></ul>
+                <ul id="history-list">
+                    <li>Cargando historial...</li>
+                </ul>
             </div>
         </main>
         <aside class="user-panel">
@@ -38,7 +42,7 @@
             </div>
         </aside>
     </div>
-    
+
     <div id="deposit-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button id="close-modal-btn" class="close-btn">&times;</button>
@@ -50,7 +54,7 @@
             </div>
         </div>
     </div>
-    
+
     <script src="script.js" defer></script>
 </body>
 </html>
