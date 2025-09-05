@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-
-    // ▼▼ TU CONFIGURACIÓN DE FIREBASE (YA ESTÁ BIEN) ▼▼
+    // ▼▼ TU CONFIGURACIÓN DE FIREBASE ▼▼
     const firebaseConfig = {
       apiKey: "AIzaSyCFfeidxVBVMgDyKdBc3qq9sqs-Ht6CLLM",
       authDomain: "simulador-apuestas-uni.firebaseapp.com",
@@ -9,9 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
       messagingSenderId: "1089950371477",
       appId: "1:1089950371477:web:3e7fdc7fa16ad8e5c6559c"
     };
-    // ▲▲ --------------------------------------------- ▲▲
+    // ▲▲ ----------------------------- ▲▲
 
-    // --- INICIALIZACIÓN DE FIREBASE ---
+    // --- INICIALIZACIÓN ---
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
@@ -21,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const SINGLE_MATCH = {
         id: 1,
         home: "Alianza Lima",
-        away: "Universitario"
+        away: "Universitario de Deportes"
     };
 
     // --- VARIABLES DE ESTADO ---
@@ -54,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- LÓGICA DE TIEMPO REAL PARA LA TRANSMISIÓN ---
+    // --- LÓGICA DE TIEMPO REAL Y SIMULACIÓN ---
     function listenForLiveMatch() {
         const liveMatchRef = db.collection('liveMatch').doc('current');
         liveMatchRef.onSnapshot(doc => {
@@ -63,16 +62,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (doc.exists) {
                 const data = doc.data();
+                if (data.status === 'finished' && currentUser) {
+                    checkAndUpdateHistory(data.winner);
+                }
+
                 if (data.streamUrl && data.status === 'live') {
                     const channelName = getChannelFromUrl(data.streamUrl);
                     if (channelName && streamContainerEl) {
                         streamContainerEl.innerHTML = `
                             <iframe src="https://player.kick.com/${channelName}"
                                 style="border:none; width:100%; height:400px;"
-                                allowfullscreen="true"
-                                scrolling="no">
+                                allowfullscreen="true" scrolling="no">
                             </iframe>`;
-                        const odds = data.odds || { '1': 1.60, 'X': 2.00, '2': 1.50 };
+                        const odds = data.odds || { '1': 1.60, 'X': 2.00, '2': 1.70 };
                         createMatchElement(SINGLE_MATCH.id, SINGLE_MATCH.home, SINGLE_MATCH.away, odds);
                     }
                 } else {
@@ -85,13 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getChannelFromUrl(url) {
-        try {
-            const path = new URL(url).pathname;
-            return path.split('/').pop();
-        } catch (e) { return null; }
+        try { const path = new URL(url).pathname; return path.split('/').pop(); } 
+        catch (e) { return null; }
     }
 
-    // --- FUNCIONES DEL SIMULADOR ---
     function loadData() {
         if (!currentUser) return;
         const userDocRef = db.collection('users').doc(currentUser.uid);
@@ -102,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 betsHistory = data.history || [];
                 currentUser.role = data.role || 'user';
             } else {
-                balance = 0;
+                balance = 1000;
                 betsHistory = [];
                 currentUser.role = 'user';
                 saveData(true);
@@ -114,13 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
     async function saveData(isInitialSetup = false) {
         if (!currentUser) return;
         const userDocRef = db.collection('users').doc(currentUser.uid);
-        const dataToSave = {
-            balance: balance,
-            history: betsHistory
-        };
-        if (isInitialSetup) {
-            dataToSave.role = 'user';
-        }
+        const dataToSave = { balance: balance, history: betsHistory };
+        if (isInitialSetup) { dataToSave.role = 'user'; }
         await userDocRef.set(dataToSave, { merge: true });
     }
     
@@ -139,10 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleOddClick(e) {
-        if (balance <= 0) {
-            alert("No tienes saldo para apostar.");
-            return;
-        }
+        if (balance <= 0) { alert("No tienes saldo para apostar."); return; }
         const target = e.target;
         if (target.tagName !== 'BUTTON') return;
         if (target.classList.contains('selected')) {
@@ -195,7 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("Monto inválido o saldo insuficiente.");
             return;
         }
-        
         try {
             balance -= amount;
             const liveBetRef = db.collection('liveBets').doc();
@@ -205,14 +195,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 selection: currentBet.selection,
                 amount: amount,
                 odd: currentBet.odd,
-                timestamp: new Date()
+                timestamp: new Date(),
+                type: currentBet.type // <-- CORRECCIÓN: AÑADIDO EL TIPO DE APUESTA
             });
             betsHistory.unshift({
                 selection: currentBet.selection,
                 amount: amount,
                 odd: currentBet.odd,
                 timestamp: new Date().toLocaleString('es-PE'),
-                status: 'Pendiente'
+                status: 'Pendiente',
+                type: currentBet.type // <-- CORRECCIÓN: AÑADIDO EL TIPO DE APUESTA
             });
             await saveData();
             updateUI();
@@ -223,10 +215,27 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("Error al realizar la apuesta:", error);
             alert("Hubo un problema al registrar tu apuesta.");
-            balance += amount; // Devolvemos el saldo si hay error
+            balance += amount;
         }
     }
     
+    async function checkAndUpdateHistory(winner) {
+        let historyNeedsUpdate = false;
+        const pendingBets = betsHistory.filter(bet => bet.status === 'Pendiente');
+        if (pendingBets.length === 0) return;
+
+        pendingBets.forEach(bet => {
+            bet.won = bet.type === winner;
+            bet.status = 'Pagada';
+            historyNeedsUpdate = true;
+        });
+
+        if (historyNeedsUpdate) {
+            console.log("Historial actualizado con el resultado final.");
+            await saveData();
+        }
+    }
+
     function updateUI() {
         balanceAmountEl.textContent = `S/ ${balance.toFixed(2)}`;
         historyListEl.innerHTML = '';
@@ -268,9 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if(depositBtn) {
         depositBtn.addEventListener('click', () => {
-            if (currentUser) {
-                userIdDisplay.value = currentUser.uid;
-            }
+            if (currentUser) userIdDisplay.value = currentUser.uid;
             depositModal.classList.remove('hidden');
         });
     }
