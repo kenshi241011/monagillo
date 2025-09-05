@@ -3,19 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Administrador</title>
+    <title>Panel de Administrador - GanaFácil</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="auth-body">
     <div class="auth-container">
         <div class="card">
-            <div id="toast-notification" class="toast"><div id="toast-message"></div></div>
+            <div id="toast-notification" class="toast">
+                <div id="toast-message"></div>
+            </div>
+
             <div class="card-header">Panel de Administrador</div>
+            
             <div id="admin-content" class="hidden">
                 <div id="stream-control">
                     <div class="form-group">
                         <label for="stream-url">URL del Canal de Kick:</label>
                         <input type="text" id="stream-url" placeholder="https://kick.com/tu_usuario">
+                    </div>
+                    <div class="form-group">
+                        <label>Cuotas (Gana/Empate/Pierde):</label>
+                        <div class="live-odds-inputs">
+                            <input type="number" id="live-odd-1" placeholder="Gana Local (1)">
+                            <input type="number" id="live-odd-x" placeholder="Empate (X)">
+                            <input type="number" id="live-odd-2" placeholder="Gana Visita (2)">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Cuotas (Primer Gol):</label>
+                        <div class="live-odds-inputs">
+                            <input type="number" id="live-odd-fg1" placeholder="Anota Local">
+                            <input type="number" id="live-odd-fg2" placeholder="Anota Visitante">
+                        </div>
                     </div>
                     <button id="update-stream-btn" class="auth-button">Iniciar / Actualizar Transmisión</button>
                     <button id="stop-stream-btn" class="auth-button danger-button">Finalizar Transmisión</button>
@@ -25,7 +44,7 @@
                 <div id="settle-bets-control">
                     <div class="card-header">Finalizar Partido y Pagar</div>
                     <div class="form-group">
-                        <label for="winner-selector">Selecciona el Resultado Final:</label>
+                        <label for="winner-selector">Resultado (Gana/Empate/Pierde):</label>
                         <select id="winner-selector">
                             <option value="" disabled selected>-- Elige un resultado --</option>
                             <option value="1">Gana Local</option>
@@ -33,17 +52,29 @@
                             <option value="2">Gana Visitante</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label for="first-goal-selector">Resultado (Primer Gol):</label>
+                        <select id="first-goal-selector">
+                            <option value="" disabled selected>-- Elige un resultado --</option>
+                            <option value="fg1">Anotó Local</option>
+                            <option value="fg2">Anotó Visitante</option>
+                            <option value="none">No hubo goles</option>
+                        </select>
+                    </div>
                     <button id="settle-bets-btn" class="auth-button success-button">Finalizar y Pagar Apuestas</button>
                 </div>
                 <hr style="margin: 20px 0;">
+
                 <div id="live-bets-feed">
                     <div class="card-header">Apuestas en Tiempo Real</div>
-                    <ul id="live-bets-list"></ul>
+                    <ul id="live-bets-list">
+                        <li>Cargando apuestas...</li>
+                    </ul>
                 </div>
                 <hr style="margin: 20px 0;">
                 
                 <div class="form-group">
-                    <label for="search-user-id">Buscar por ID de Usuario:</label>
+                    <label for="search-user-id">Buscar por ID de Usuario (Recarga Manual):</label>
                     <input type="text" id="search-user-id">
                     <button id="search-btn" class="auth-button secondary-button">Buscar</button>
                 </div>
@@ -58,6 +89,7 @@
                     </div>
                 </div>
             </div>
+
             <div id="status-message">Verificando permisos...</div>
         </div>
     </div>
