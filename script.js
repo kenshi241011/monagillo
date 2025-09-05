@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- LÓGICA DE TIEMPO REAL PARA LA TRANSMISIÓN ---
+    // --- LÓGICA DE TIEMPO REAL Y SIMULACIÓN ---
     function listenForLiveMatch() {
         const liveMatchRef = db.collection('liveMatch').doc('current');
         liveMatchRef.onSnapshot(doc => {
@@ -62,17 +62,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (doc.exists) {
                 const data = doc.data();
+                // Si el partido ha finalizado, actualizamos el historial del usuario
+                if (data.status === 'finished' && currentUser) {
+                    checkAndUpdateHistory(data);
+                }
+
                 if (data.streamUrl && data.status === 'live') {
                     const channelName = getChannelFromUrl(data.streamUrl);
                     if (channelName && streamContainerEl) {
                         streamContainerEl.innerHTML = `
-                            <iframe
-                                src="https://player.kick.com/${channelName}"
+                            <iframe src="https://player.kick.com/${channelName}"
                                 style="border:none; width:100%; height:400px;"
-                                allowfullscreen="true"
-                                scrolling="no">
+                                allowfullscreen="true" scrolling="no">
                             </iframe>`;
-                        const odds = data.odds || { '1': 1.60, 'X': 2.00, '2': 1.70 };
+                        const odds = data.odds || { '1': 1.85, 'X': 3.20, '2': 2.50 };
                         createMatchElement(SINGLE_MATCH.id, SINGLE_MATCH.home, SINGLE_MATCH.away, odds);
                     }
                 } else {
@@ -102,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 betsHistory = data.history || [];
                 currentUser.role = data.role || 'user';
             } else {
-                balance = 0;
+                balance = 1000;
                 betsHistory = [];
                 currentUser.role = 'user';
                 saveData(true);
@@ -136,6 +139,24 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         matchesContainerEl.appendChild(matchEl);
+
+        // Lógica para las apuestas de proposición (Primer Gol)
+        const propBetsContainerEl = document.getElementById('prop-bets-container');
+        if (propBetsContainerEl) {
+            propBetsContainerEl.innerHTML = '';
+            if (odds.fg1 && odds.fg2) {
+                const propBetEl = document.createElement('div');
+                propBetEl.className = 'match prop-bet';
+                propBetEl.innerHTML = `
+                    <div class="match-teams">¿Quién anota el primer gol?</div>
+                    <div class="odds-buttons">
+                        <button data-type="fg1" data-value="${odds.fg1}" data-selection="Primer Gol: ${home}">${home} - ${odds.fg1.toFixed(2)}</button>
+                        <button data-type="fg2" data-value="${odds.fg2}" data-selection="Primer Gol: ${away}">${away} - ${odds.fg2.toFixed(2)}</button>
+                    </div>
+                `;
+                propBetsContainerEl.appendChild(propBetEl);
+            }
+        }
     }
 
     function handleOddClick(e) {
@@ -195,7 +216,6 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("Monto inválido o saldo insuficiente.");
             return;
         }
-        
         try {
             balance -= amount;
             const liveBetRef = db.collection('liveBets').doc();
@@ -225,28 +245,36 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("Error al realizar la apuesta:", error);
             alert("Hubo un problema al registrar tu apuesta.");
-            balance += amount; // Devolvemos el saldo
+            balance += amount;
         }
     }
     
-    async function checkAndUpdateHistory(winner) {
+    // --- NUEVA FUNCIÓN PARA ACTUALIZAR EL HISTORIAL DEL USUARIO ---
+    async function checkAndUpdateHistory(finalResults) {
         let historyNeedsUpdate = false;
         
         const pendingBets = betsHistory.filter(bet => bet.status === 'Pendiente');
         if (pendingBets.length === 0) return;
 
         pendingBets.forEach(bet => {
-            bet.won = bet.type === winner;
+            let isWinner = false;
+            if ((bet.type === '1' || bet.type === 'X' || bet.type === '2')) {
+                if (bet.type === finalResults.winner) isWinner = true;
+            } else if ((bet.type === 'fg1' || bet.type === 'fg2')) {
+                if (bet.type === finalResults.firstGoalWinner) isWinner = true;
+            }
+            
+            bet.won = isWinner;
             bet.status = 'Pagada';
             historyNeedsUpdate = true;
         });
 
         if (historyNeedsUpdate) {
-            console.log("Historial actualizado con el resultado final.");
+            console.log("Historial local actualizado con el resultado final.");
             await saveData();
         }
     }
-
+    
     function updateUI() {
         balanceAmountEl.textContent = `S/ ${balance.toFixed(2)}`;
         historyListEl.innerHTML = '';
