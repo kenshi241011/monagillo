@@ -8,8 +8,9 @@
 </head>
 <body class="auth-body">
     <div class="auth-container">
+        <div id="toast-notification" class="toast"><div id="toast-message"></div></div>
+
         <div class="card">
-            <div id="toast-notification" class="toast"><div id="toast-message"></div></div>
             <div class="card-header">Panel de Administrador</div>
             <div id="admin-content" class="hidden">
                 <div id="stream-control">
@@ -17,20 +18,38 @@
                         <label for="stream-url">URL del Canal de Kick:</label>
                         <input type="text" id="stream-url" placeholder="https://kick.com/tu_usuario">
                     </div>
+                    <div class="form-group">
+                        <label>Cuotas del Partido:</label>
+                        <input type="number" id="odds-1" placeholder="Local (1)">
+                        <input type="number" id="odds-X" placeholder="Empate (X)">
+                        <input type="number" id="odds-2" placeholder="Visitante (2)">
+                    </div>
+                    <div class="form-group">
+                        <label>Cuotas de Primer Gol:</label>
+                        <input type="number" id="odds-fg1" placeholder="Primer Gol Local">
+                        <input type="number" id="odds-fg2" placeholder="Primer Gol Visitante">
+                    </div>
                     <button id="update-stream-btn" class="auth-button">Iniciar / Actualizar Transmisión</button>
                     <button id="stop-stream-btn" class="auth-button danger-button">Finalizar Transmisión</button>
                 </div>
                 <hr style="margin: 20px 0;">
-
                 <div id="settle-bets-control">
                     <div class="card-header">Finalizar Partido y Pagar</div>
                     <div class="form-group">
-                        <label for="winner-selector">Selecciona el Resultado Final:</label>
+                        <label for="winner-selector">Resultado del Partido:</label>
                         <select id="winner-selector">
-                            <option value="" disabled selected>-- Elige un resultado --</option>
+                            <option value="" disabled selected>-- Elige --</option>
                             <option value="1">Gana Local</option>
                             <option value="X">Empate</option>
                             <option value="2">Gana Visitante</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="first-goal-selector">Primer Gol:</label>
+                        <select id="first-goal-selector">
+                            <option value="" disabled selected>-- Elige --</option>
+                            <option value="fg1">Local</option>
+                            <option value="fg2">Visitante</option>
                         </select>
                     </div>
                     <button id="settle-bets-btn" class="auth-button success-button">Finalizar y Pagar Apuestas</button>
@@ -41,7 +60,6 @@
                     <ul id="live-bets-list"></ul>
                 </div>
                 <hr style="margin: 20px 0;">
-                
                 <div class="form-group">
                     <label for="search-user-id">Buscar por ID de Usuario:</label>
                     <input type="text" id="search-user-id">
@@ -58,10 +76,9 @@
                     </div>
                 </div>
             </div>
-            <div id="status-message">Verificando permisos...</div>
+            <div id="status-message">Verificacion exitosa</div>
         </div>
     </div>
-    
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>

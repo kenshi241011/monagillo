@@ -26,12 +26,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- VARIABLES DE ESTADO ---
     let balance = 0;
     let betsHistory = [];
-    let currentBet = null;
+    let betSlipSelections = []; // <--- AHORA ES UN ARRAY PARA APUESTAS COMBINADAS
 
     // --- ELEMENTOS DEL DOM ---
     const streamContainerEl = document.getElementById('stream-container');
     const balanceAmountEl = document.getElementById('balance-amount');
     const matchesContainerEl = document.getElementById('matches-container');
+    const propBetsContainerEl = document.getElementById('prop-bets-container'); // Contenedor para apuestas especiales
     const slipContentEl = document.getElementById('slip-content');
     const historyListEl = document.getElementById('history-list');
     const userEmailEl = document.getElementById('user-email');
@@ -45,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     auth.onAuthStateChanged(user => {
         if (user) {
             currentUser = user;
-            userEmailEl.textContent = user.displayName;
+            userEmailEl.textContent = user.displayName || user.email;
             loadData();
             listenForLiveMatch();
         } else {
@@ -53,238 +54,191 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- LÓGICA DE TIEMPO REAL Y SIMULACIÓN ---
     function listenForLiveMatch() {
-        const liveMatchRef = db.collection('liveMatch').doc('current');
-        liveMatchRef.onSnapshot(doc => {
-            if (streamContainerEl) streamContainerEl.innerHTML = '';
-            if (matchesContainerEl) matchesContainerEl.innerHTML = '';
+        db.collection('liveMatch').doc('current').onSnapshot(doc => {
+            streamContainerEl.innerHTML = '';
+            matchesContainerEl.innerHTML = '';
+            if (propBetsContainerEl) propBetsContainerEl.innerHTML = '';
+            betSlipSelections = [];
+            updateBetSlip();
 
-            if (doc.exists) {
+            if (doc.exists && doc.data().status === 'live') {
                 const data = doc.data();
-                if (data.status === 'finished' && currentUser) {
-                    checkAndUpdateHistory(data.winner);
-                }
-
-                if (data.streamUrl && data.status === 'live') {
+                if (data.streamUrl) {
                     const channelName = getChannelFromUrl(data.streamUrl);
-                    if (channelName && streamContainerEl) {
-                        streamContainerEl.innerHTML = `
-                            <iframe src="https://player.kick.com/${channelName}"
-                                style="border:none; width:100%; height:400px;"
-                                allowfullscreen="true" scrolling="no">
-                            </iframe>`;
-                        const odds = data.odds || { '1': 1.60, 'X': 2.00, '2': 1.70 };
-                        createMatchElement(SINGLE_MATCH.id, SINGLE_MATCH.home, SINGLE_MATCH.away, odds);
+                    if (channelName) {
+                        streamContainerEl.innerHTML = `<iframe src="https://player.kick.com/${channelName}" style="border:none; width:100%; height:400px;" allowfullscreen="true" scrolling="no"></iframe>`;
                     }
-                } else {
-                    if (streamContainerEl) streamContainerEl.innerHTML = '<p style="text-align:center; padding: 20px;">La transmisión ha finalizado.</p>';
                 }
+                createMatchElement(data.odds || {});
             } else {
-                if (streamContainerEl) streamContainerEl.innerHTML = '<p style="text-align:center; padding: 20px;">No hay transmisión programada.</p>';
+                streamContainerEl.innerHTML = '<p style="text-align:center; padding: 20px;">La transmisión ha finalizado o no está disponible.</p>';
             }
         });
     }
-
+    
     function getChannelFromUrl(url) {
-        try { const path = new URL(url).pathname; return path.split('/').pop(); } 
+        try { const path = new URL(url).pathname; return path.split('/').pop(); }
         catch (e) { return null; }
     }
 
     function loadData() {
         if (!currentUser) return;
-        const userDocRef = db.collection('users').doc(currentUser.uid);
-        userDocRef.onSnapshot(doc => {
-            if (doc.exists) {
-                const data = doc.data();
-                balance = data.balance;
-                betsHistory = data.history || [];
-                currentUser.role = data.role || 'user';
-            } else {
-                balance = 1000;
-                betsHistory = [];
-                currentUser.role = 'user';
-                saveData(true);
-            }
+        db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
+            balance = doc.exists ? doc.data().balance : 1000;
+            betsHistory = doc.exists ? doc.data().history || [] : [];
             updateUI();
         });
     }
 
-    async function saveData(isInitialSetup = false) {
-        if (!currentUser) return;
-        const userDocRef = db.collection('users').doc(currentUser.uid);
-        const dataToSave = { balance: balance, history: betsHistory };
-        if (isInitialSetup) { dataToSave.role = 'user'; }
-        await userDocRef.set(dataToSave, { merge: true });
-    }
-    
-    function createMatchElement(id, home, away, odds) {
+    function createMatchElement(odds) {
+        // Mercado Principal
         const matchEl = document.createElement('div');
         matchEl.className = 'match';
         matchEl.innerHTML = `
-            <div class="match-teams">${home} vs ${away}</div>
-            <div class="odds-buttons">
-                <button data-type="1" data-value="${odds['1'] || 0}" data-selection="${home} (Gana)">1 - ${(odds['1'] || 0).toFixed(2)}</button>
+            <div class="match-teams">${SINGLE_MATCH.home} vs ${SINGLE_MATCH.away}</div>
+            <p class="market-title">Resultado del Partido</p>
+            <div class="odds-buttons" data-market="main_result">
+                <button data-type="1" data-value="${odds['1'] || 0}" data-selection="${SINGLE_MATCH.home} (Gana)">1 - ${(odds['1'] || 0).toFixed(2)}</button>
                 <button data-type="X" data-value="${odds['X'] || 0}" data-selection="Empate">X - ${(odds['X'] || 0).toFixed(2)}</button>
-                <button data-type="2" data-value="${odds['2'] || 0}" data-selection="${away} (Gana)">2 - ${(odds['2'] || 0).toFixed(2)}</button>
+                <button data-type="2" data-value="${odds['2'] || 0}" data-selection="${SINGLE_MATCH.away} (Gana)">2 - ${(odds['2'] || 0).toFixed(2)}</button>
             </div>
         `;
         matchesContainerEl.appendChild(matchEl);
+
+        // Mercado de Primer Gol
+        if (odds['fg1'] && propBetsContainerEl) {
+            const propBetEl = document.createElement('div');
+            propBetEl.className = 'match';
+            propBetEl.innerHTML = `
+                <p class="market-title">¿Quién anota el primer gol?</p>
+                <div class="odds-buttons" data-market="first_goal">
+                    <button data-type="fg1" data-value="${odds['fg1']}" data-selection="Primer Gol: ${SINGLE_MATCH.home}"> ${SINGLE_MATCH.home} - ${odds['fg1'].toFixed(2)}</button>
+                    <button data-type="fg2" data-value="${odds['fg2']}" data-selection="Primer Gol: ${SINGLE_MATCH.away}"> ${SINGLE_MATCH.away} - ${odds['fg2'].toFixed(2)}</button>
+                </div>
+            `;
+            propBetsContainerEl.appendChild(propBetEl);
+        }
     }
 
     function handleOddClick(e) {
-        if (balance <= 0) { alert("No tienes saldo para apostar."); return; }
-        const target = e.target;
-        if (target.tagName !== 'BUTTON') return;
+        const target = e.target.closest('button');
+        if (!target) return;
+
+        const market = target.parentElement.dataset.market;
+        const selection = {
+            market: market,
+            type: target.dataset.type,
+            selection: target.dataset.selection,
+            odd: parseFloat(target.dataset.value)
+        };
+
+        const existingSelectionIndex = betSlipSelections.findIndex(s => s.market === market);
+        
         if (target.classList.contains('selected')) {
+            // Deseleccionar
             target.classList.remove('selected');
-            currentBet = null;
+            betSlipSelections = betSlipSelections.filter(s => s.type !== selection.type);
         } else {
-            document.querySelectorAll('.odds-buttons button').forEach(btn => btn.classList.remove('selected'));
+            // Quitar otra seleccion del mismo mercado
+            if (existingSelectionIndex > -1) {
+                const oldSelectionType = betSlipSelections[existingSelectionIndex].type;
+                document.querySelector(`button[data-type="${oldSelectionType}"]`).classList.remove('selected');
+                betSlipSelections.splice(existingSelectionIndex, 1);
+            }
+            // Seleccionar la nueva
             target.classList.add('selected');
-            currentBet = { teams: `${SINGLE_MATCH.home} vs ${SINGLE_MATCH.away}`, selection: target.dataset.selection, odd: parseFloat(target.dataset.value), type: target.dataset.type };
+            betSlipSelections.push(selection);
         }
         updateBetSlip();
     }
 
     function updateBetSlip() {
-        if (!currentBet) {
-            slipContentEl.innerHTML = `<p>Selecciona una cuota para empezar.</p>`;
+        if (betSlipSelections.length === 0) {
+            slipContentEl.innerHTML = `<p>Selecciona una o más cuotas.</p>`;
             return;
         }
+
+        let totalOdd = 1;
+        let selectionsHTML = '';
+        betSlipSelections.forEach(sel => {
+            totalOdd *= sel.odd;
+            selectionsHTML += `
+                <div class="bet-info-item">
+                    <p class="selection-name">${sel.selection}</p>
+                    <p>Cuota: ${sel.odd.toFixed(2)}</p>
+                </div>
+            `;
+        });
+
         slipContentEl.innerHTML = `
-            <div class="bet-info">
-                <strong>${currentBet.teams}</strong><br>
-                <span>Tu Selección: ${currentBet.selection}</span><br>
-                <strong>Cuota: ${currentBet.odd.toFixed(2)}</strong>
+            ${selectionsHTML}
+            <div id="slip-summary">
+                <p>Cuota Total: <strong>${totalOdd.toFixed(2)}</strong></p>
             </div>
-            <input type="number" id="bet-amount" placeholder="Monto a apostar (ej. 50)">
+            <input type="number" id="bet-amount" placeholder="Monto (ej. 50)">
             <p>Ganancia Potencial: <strong id="potential-winnings">S/ 0.00</strong></p>
             <button id="place-bet-btn" disabled>Apostar</button>
         `;
+
         const betAmountInput = document.getElementById('bet-amount');
         const placeBetBtn = document.getElementById('place-bet-btn');
+
         placeBetBtn.addEventListener('click', placeBet);
         betAmountInput.addEventListener('input', () => {
-            const amount = parseFloat(betAmountInput.value);
-            const isAmountValid = amount > 0 && amount <= balance;
-            if (isAmountValid) {
-                document.getElementById('potential-winnings').textContent = `S/ ${(amount * currentBet.odd).toFixed(2)}`;
-                placeBetBtn.disabled = false;
-            } else {
-                document.getElementById('potential-winnings').textContent = `S/ 0.00`;
-                placeBetBtn.disabled = true;
-            }
+            const amount = parseFloat(betAmountInput.value) || 0;
+            placeBetBtn.disabled = !(amount > 0 && amount <= balance);
+            document.getElementById('potential-winnings').textContent = `S/ ${(amount * totalOdd).toFixed(2)}`;
         });
     }
 
     async function placeBet() {
-        const amountInput = document.getElementById('bet-amount');
-        if (!amountInput) return;
-        const amount = parseFloat(amountInput.value);
-        if (!amount || !currentBet || amount <= 0 || amount > balance) {
-            alert("Monto inválido o saldo insuficiente.");
+        const amount = parseFloat(document.getElementById('bet-amount').value);
+        if (!amount || amount <= 0 || amount > balance || betSlipSelections.length === 0) {
+            alert("Monto inválido, saldo insuficiente o no hay selecciones.");
             return;
         }
+
+        const totalOdd = betSlipSelections.reduce((acc, sel) => acc * sel.odd, 1);
+        const combinedSelectionName = betSlipSelections.map(s => s.selection).join(' + ');
+
         try {
-            balance -= amount;
-            const liveBetRef = db.collection('liveBets').doc();
-            await liveBetRef.set({
+            await db.collection('liveBets').add({
                 userId: currentUser.uid,
-                userName: currentUser.displayName,
-                selection: currentBet.selection,
+                userName: currentUser.displayName || currentUser.email,
                 amount: amount,
-                odd: currentBet.odd,
-                timestamp: new Date(),
-                type: currentBet.type // <-- CORRECCIÓN: AÑADIDO EL TIPO DE APUESTA
+                odd: totalOdd,
+                selections: betSlipSelections, // Guarda el array de selecciones
+                selection: combinedSelectionName, // Un nombre combinado para fácil lectura
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
-            betsHistory.unshift({
-                selection: currentBet.selection,
-                amount: amount,
-                odd: currentBet.odd,
-                timestamp: new Date().toLocaleString('es-PE'),
-                status: 'Pendiente',
-                type: currentBet.type // <-- CORRECCIÓN: AÑADIDO EL TIPO DE APUESTA
-            });
-            await saveData();
-            updateUI();
-            alert(`Apuesta realizada: S/ ${amount.toFixed(2)} a "${currentBet.selection}".`);
-            currentBet = null;
-            document.querySelectorAll('.odds-buttons button').forEach(btn => btn.classList.remove('selected'));
+
+            const newBalance = balance - amount;
+            await db.collection('users').doc(currentUser.uid).update({ balance: newBalance });
+
+            alert(`Apuesta combinada realizada por S/ ${amount.toFixed(2)}.`);
+            betSlipSelections = [];
+            document.querySelectorAll('.odds-buttons button.selected').forEach(btn => btn.classList.remove('selected'));
             updateBetSlip();
+
         } catch (error) {
             console.error("Error al realizar la apuesta:", error);
             alert("Hubo un problema al registrar tu apuesta.");
-            balance += amount;
         }
     }
     
-    async function checkAndUpdateHistory(winner) {
-        let historyNeedsUpdate = false;
-        const pendingBets = betsHistory.filter(bet => bet.status === 'Pendiente');
-        if (pendingBets.length === 0) return;
-
-        pendingBets.forEach(bet => {
-            bet.won = bet.type === winner;
-            bet.status = 'Pagada';
-            historyNeedsUpdate = true;
-        });
-
-        if (historyNeedsUpdate) {
-            console.log("Historial actualizado con el resultado final.");
-            await saveData();
-        }
-    }
-
     function updateUI() {
         balanceAmountEl.textContent = `S/ ${balance.toFixed(2)}`;
-        historyListEl.innerHTML = '';
-        betsHistory.forEach(bet => {
-            const li = document.createElement('li');
-            let resultHTML = '';
-            if (bet.status === 'Pendiente') {
-                resultHTML = `<span style="color: #ffc107; font-weight: bold;">Pendiente</span>`;
-            } else {
-                const resultClass = bet.won ? 'won' : 'lost';
-                const winnings = bet.won ? bet.amount * bet.odd - bet.amount : bet.amount;
-                const sign = bet.won ? '+' : '-';
-                resultHTML = `<span class="history-outcome ${resultClass}">${sign} S/ ${winnings.toFixed(2)}</span>`;
-            }
-            li.innerHTML = `
-                <div class="history-header">
-                    <span>Apostado: S/ ${bet.amount.toFixed(2)} a "${bet.selection}"</span>
-                    ${resultHTML}
-                </div>
-                <small style="color: #888;">${bet.timestamp}</small>
-            `;
-            historyListEl.appendChild(li);
-        });
-        const adminLink = document.getElementById('admin-link');
-        if (currentUser && currentUser.role === 'admin' && !adminLink) {
-            const link = document.createElement('a');
-            link.href = 'admin.html';
-            link.textContent = 'Panel de Administrador';
-            link.id = 'admin-link';
-            link.className = 'auth-button secondary-button';
-            link.style.textDecoration = 'none';
-            logoutBtn.parentNode.insertBefore(link, logoutBtn);
-        }
+        // Lógica del historial si es necesario
     }
     
-    // --- EVENT LISTENERS ---
-    if(logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut().catch(error => console.error(error)));
-    if(matchesContainerEl) matchesContainerEl.addEventListener('click', handleOddClick);
-    
-    if(depositBtn) {
-        depositBtn.addEventListener('click', () => {
-            if (currentUser) userIdDisplay.value = currentUser.uid;
-            depositModal.classList.remove('hidden');
-        });
-    }
-
-    if(closeModalBtn) {
-        closeModalBtn.addEventListener('click', () => {
-            depositModal.classList.add('hidden');
-        });
-    }
+    document.body.addEventListener('click', handleOddClick);
+    logoutBtn.addEventListener('click', () => auth.signOut());
+    depositBtn.addEventListener('click', () => {
+        if (currentUser) userIdDisplay.value = currentUser.uid;
+        depositModal.classList.remove('hidden');
+    });
+    closeModalBtn.addEventListener('click', () => {
+        depositModal.classList.add('hidden');
+    });
 });
