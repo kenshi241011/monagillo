@@ -15,15 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
     let currentUser = null;
-
-    // --- DATOS DEL PARTIDO ---
-    const SINGLE_MATCH = {
-        id: 1,
-        home: "Alianza Lima",
-        away: "Universitario de Deportes"
-    };
-
-    // --- VARIABLES DE ESTADO ---
     let balance = 0;
     let currentBet = null;
     let countdownInterval = null;
@@ -36,102 +27,93 @@ document.addEventListener('DOMContentLoaded', () => {
     const userEmailEl = document.getElementById('user-email');
     const logoutBtn = document.getElementById('logout-btn');
     const depositBtn = document.getElementById('deposit-btn');
+    const historyListEl = document.getElementById('history-list');
     const depositModal = document.getElementById('deposit-modal');
     const closeModalBtn = document.getElementById('close-modal-btn');
     const userIdDisplay = document.getElementById('user-id-display');
+
+    // --- DATOS DEL PARTIDO ---
+    const SINGLE_MATCH = {
+        id: 1,
+        home: "Alianza Lima",
+        away: "Universitario de Deportes"
+    };
 
     auth.onAuthStateChanged(user => {
         if (user) {
             currentUser = user;
             userEmailEl.textContent = user.displayName || user.email;
-            loadUserData(); // <--- CAMBIO AQUÍ: Llamamos a la función mejorada
+            loadUserData();
             listenForLiveMatch();
         } else {
             window.location.href = 'login.html';
         }
     });
 
-    // <--- CAMBIO AQUÍ: FUNCIÓN MEJORADA PARA CARGAR DATOS Y VERIFICAR ROL DE ADMIN ---
     function loadUserData() {
         if (!currentUser) return;
         db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
             if (doc.exists) {
                 const data = doc.data();
                 balance = data.balance || 0;
-                // Lógica para mostrar el botón de admin
                 displayAdminLink(data.role);
+                updateHistoryUI(data.history || []);
             } else {
-                // Si el usuario no existe en la BD, se le asigna un saldo inicial
                 balance = 1000;
                 db.collection('users').doc(currentUser.uid).set({
                     balance: balance,
-                    role: 'user', // Rol por defecto
+                    role: 'user',
                     displayName: currentUser.displayName,
-                    email: currentUser.email
+                    email: currentUser.email,
+                    history: []
                 });
             }
             balanceAmountEl.textContent = `S/ ${balance.toFixed(2)}`;
         });
     }
-    
-    // <--- CAMBIO AQUÍ: NUEVA FUNCIÓN PARA MOSTRAR EL BOTÓN DE ADMIN ---
+
+    function updateHistoryUI(history = []) {
+        historyListEl.innerHTML = '';
+        if (history.length === 0) {
+            historyListEl.innerHTML = '<li>No tienes apuestas en tu historial.</li>';
+            return;
+        }
+        const sortedHistory = history.sort((a, b) => {
+            const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date();
+            const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date();
+            return dateB - dateA;
+        });
+        sortedHistory.forEach(bet => {
+            const li = document.createElement('li');
+            const betDate = bet.timestamp?.toDate ? bet.timestamp.toDate().toLocaleString('es-PE') : 'Reciente';
+            li.innerHTML = `
+                <div class="history-header">
+                    <span>Apostado: S/ ${bet.amount.toFixed(2)} a "${bet.selection}"</span>
+                    <span style="font-weight: bold;">${bet.status || 'Pendiente'}</span>
+                </div>
+                <small style="color: #888;">${betDate}</small>
+            `;
+            historyListEl.appendChild(li);
+        });
+    }
+
     function displayAdminLink(role) {
         const existingLink = document.getElementById('admin-link');
         if (role === 'admin') {
-            if (!existingLink) { // Solo crea el botón si no existe
+            if (!existingLink) {
                 const link = document.createElement('a');
                 link.href = 'admin.html';
                 link.textContent = 'Panel de Administrador';
                 link.id = 'admin-link';
-                link.className = 'auth-button secondary-button'; // Clases para que se vea como un botón
+                link.className = 'auth-button secondary-button';
                 link.style.textDecoration = 'none';
                 link.style.textAlign = 'center';
                 link.style.display = 'block';
-                
-                // Inserta el botón antes del de "Cerrar Sesión"
                 logoutBtn.parentNode.insertBefore(link, logoutBtn);
             }
         } else {
-            // Si el usuario no es admin y el link existe, lo quita
-            if (existingLink) {
-                existingLink.remove();
-            }
+            if (existingLink) existingLink.remove();
         }
-    }
-
-    // El resto del código no tiene cambios
-    
-    function disableBetting() {
-        document.querySelectorAll('.odds-buttons button').forEach(button => {
-            button.disabled = true;
-        });
-        slipContentEl.innerHTML = `<p>Las apuestas para este evento están cerradas.</p>`;
-    }
-
-    function enableBetting() {
-        document.querySelectorAll('.odds-buttons button').forEach(button => {
-            button.disabled = false;
-        });
-        slipContentEl.innerHTML = `<p>Selecciona una cuota.</p>`;
-    }
-
-    function startBettingTimer(durationInSeconds) {
-        if (countdownInterval) clearInterval(countdownInterval);
-        const timerDisplay = document.getElementById('betting-timer');
-        if (!timerDisplay) return;
-        let timer = durationInSeconds;
-        countdownInterval = setInterval(() => {
-            let minutes = parseInt(timer / 60, 10);
-            let seconds = parseInt(timer % 60, 10);
-            minutes = minutes < 10 ? "0" + minutes : minutes;
-            seconds = seconds < 10 ? "0" + seconds : seconds;
-            timerDisplay.textContent = `Tiempo para apostar: ${minutes}:${seconds}`;
-            if (--timer < 0) {
-                clearInterval(countdownInterval);
-                timerDisplay.textContent = "El tiempo para apostar ha terminado.";
-                disableBetting();
-            }
-        }, 1000);
     }
 
     function listenForLiveMatch() {
@@ -161,6 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 streamContainerEl.innerHTML = '<p style="text-align:center; padding: 20px;">La transmisión ha finalizado.</p>';
+                disableBetting();
             }
         });
     }
@@ -184,7 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleOddClick(e) {
         const target = e.target.closest('button');
         if (!target || !target.closest('.odds-buttons') || target.disabled) return;
-
         if (target.classList.contains('selected')) {
             target.classList.remove('selected');
             currentBet = null;
@@ -243,8 +225,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 type: currentBet.type,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
+
+            const historyEntry = {
+                amount: amount,
+                odd: currentBet.odd,
+                selection: currentBet.selection,
+                status: 'Pendiente',
+                timestamp: new Date()
+            };
+
             const newBalance = balance - amount;
-            await db.collection('users').doc(currentUser.uid).update({ balance: newBalance });
+            await db.collection('users').doc(currentUser.uid).update({
+                balance: newBalance,
+                history: firebase.firestore.FieldValue.arrayUnion(historyEntry)
+            });
+
             alert(`Apuesta realizada por S/ ${amount.toFixed(2)}.`);
             currentBet = null;
             document.querySelectorAll('.odds-buttons button.selected').forEach(btn => btn.classList.remove('selected'));
@@ -255,9 +250,38 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function startBettingTimer(durationInSeconds) {
+        if (countdownInterval) clearInterval(countdownInterval);
+        const timerDisplay = document.getElementById('betting-timer');
+        if (!timerDisplay) return;
+        let timer = durationInSeconds;
+        countdownInterval = setInterval(() => {
+            let minutes = parseInt(timer / 60, 10);
+            let seconds = parseInt(timer % 60, 10);
+            minutes = minutes < 10 ? "0" + minutes : minutes;
+            seconds = seconds < 10 ? "0" + seconds : seconds;
+            timerDisplay.textContent = `Tiempo para apostar: ${minutes}:${seconds}`;
+            if (--timer < 0) {
+                clearInterval(countdownInterval);
+                timerDisplay.textContent = "El tiempo para apostar ha terminado.";
+                disableBetting();
+            }
+        }, 1000);
+    }
+
+    function enableBetting() {
+        document.querySelectorAll('.odds-buttons button').forEach(button => button.disabled = false);
+        slipContentEl.innerHTML = `<p>Selecciona una cuota.</p>`;
+    }
+
+    function disableBetting() {
+        document.querySelectorAll('.odds-buttons button').forEach(button => button.disabled = true);
+        slipContentEl.innerHTML = `<p>Las apuestas para este evento están cerradas.</p>`;
+    }
+
     function getChannelFromUrl(url) {
-      try { const path = new URL(url).pathname; return path.split('/').pop(); }
-      catch(e) { return null; }
+        try { const path = new URL(url).pathname; return path.split('/').pop(); }
+        catch(e) { return null; }
     }
 
     document.body.addEventListener('click', e => {
@@ -265,9 +289,9 @@ document.addEventListener('DOMContentLoaded', () => {
             handleOddClick(e);
         }
     });
-    
+
     logoutBtn.addEventListener('click', () => auth.signOut());
-    
+
     depositBtn.addEventListener('click', () => {
         if (currentUser) userIdDisplay.value = currentUser.uid;
         depositModal.classList.remove('hidden');
