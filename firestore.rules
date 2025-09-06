@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Reglas para los documentos de usuario
+    match /users/{userId} {
+      // Un usuario solo puede leer y escribir su PROPIO documento
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Un admin puede LEER y ACTUALIZAR el documento de CUALQUIER usuario
+      allow read, update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Reglas para las apuestas en vivo
+    match /liveBets/{betId} {
+      // Cualquier usuario logueado puede crear una apuesta
+      allow create: if request.auth != null;
+      
+      // SOLO el admin puede leer la lista de apuestas y borrarlas
+      allow read, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      
+      // Nadie puede actualizar apuestas para mantener la integridad
+      allow update: if false;
+    }
+    
+    // Reglas para el partido en vivo
+    match /liveMatch/{docId} {
+      // Cualquiera puede leer el estado del partido
+      allow read: if true;
+      // SOLO el admin puede escribir (actualizar) el estado del partido
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+  }
+}

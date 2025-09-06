@@ -129,14 +129,13 @@ body {
     text-align: center;
     margin-bottom: 15px;
 }
-
-/* ARREGLO: Se limpió la regla duplicada */
 .odds-buttons {
+    .odds-buttons {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    grid-template-columns: repeat(3, 1fr); /* Cambio de 2 a 3 */
     gap: var(--spacing-sm);
 }
-
+}
 .odds-buttons button {
     background-color: var(--light-gray);
     border: 1px solid #ccc;
@@ -144,10 +143,10 @@ body {
     border-radius: 5px;
     cursor: pointer;
     transition: background-color 0.2s, color 0.2s;
-    font-size: 0.9em;
-    white-space: nowrap;
+    font-size: 0.9em; /* Ajusta el tamaño de la fuente para que quepa bien */
+    white-space: nowrap; /* Evita saltos de línea dentro del botón */
     overflow: hidden;
-    text-overflow: ellipsis;
+    text-overflow: ellipsis; /* Añade puntos suspensivos si el texto es muy largo */
 }
 .odds-buttons button:hover {
     background-color: #ddd;
@@ -269,6 +268,7 @@ body {
 }
 
 /* ESTILOS PARA LAS PÁGINAS DE LOGIN/REGISTRO */
+/* ESTILOS PARA LAS PÁGINAS DE LOGIN/REGISTRO */
 .auth-body {
     display: flex;
     align-items: center;
@@ -276,26 +276,36 @@ body {
     height: 100vh;
     padding: var(--spacing-md);
     
-    /* ARREGLO: Corregido de 'eki.png' a 'eki.jpg' */
-    background-image: url('eki.jpg'); 
-    background-size: cover;
-    background-position: center center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
+    /* --- ESTILOS PARA EL FONDO DE IMAGEN --- */
+    background-image: url('eki.png'); /* Asegúrate que el nombre de archivo sea correcto */
+    background-size: cover; /* Cubre todo el área sin dejar espacios */
+    background-position: center center; /* Centra la imagen */
+    background-repeat: no-repeat; /* Evita que la imagen se repita */
+    background-attachment: fixed; /* Mantiene la imagen fija al hacer scroll (opcional, pero mejora la estética) */
+    /* --- FIN ESTILOS FONDO DE IMAGEN --- */
 
-    background-color: rgba(0, 0, 0, 0.4);
-    background-blend-mode: overlay;
+    /* Puedes añadir un filtro oscuro para que el texto sea más legible */
+    background-color: rgba(0, 0, 0, 0.4); /* Capa semi-transparente oscura */
+    background-blend-mode: overlay; /* Mezcla la capa oscura con la imagen */
 }
 
+/* Opcional: Asegura que el contenedor de login tenga un fondo para que destaque */
 .auth-container .card {
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(255, 255, 255, 0.9); /* Fondo blanco semi-transparente para la tarjeta */
+    /* Otros estilos de la tarjeta */
 }
-
+.auth-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    padding: var(--spacing-md); /* Añadir padding para móvil */
+}
 .auth-container {
     width: 100%;
     max-width: 400px;
 }
-.auth-message {
+.auth-message { /* Estilo para el párrafo de mensaje en login */
     text-align: center;
     margin: 20px 0;
     font-size: 1.1em;
@@ -324,43 +334,50 @@ body {
     text-align: center;
 }
 
+
 /* ========================================================= */
 /* === MEDIA QUERIES PARA RESPONSIVIDAD === */
 /* ========================================================= */
+
+/* Para pantallas más pequeñas (tablets y celulares) */
 @media (max-width: 900px) {
     .container {
-        grid-template-columns: 1fr;
-        gap: var(--spacing-md);
+        grid-template-columns: 1fr; /* Una sola columna para todo */
+        gap: var(--spacing-md); /* Mantiene el espaciado entre secciones */
     }
 
     .user-panel {
-        position: static;
-        order: -1;
+        position: static; /* Ya no se pega, fluye con el contenido */
+        order: -1; /* Mueve el panel del usuario arriba en móvil */
     }
 
+    /* Ajustes para el historial si está debajo del panel de usuario */
     .history-card {
-        margin-top: 0;
+        margin-top: 0; /* Elimina el margen superior ya que ahora las tarjetas tienen margin-bottom por defecto */
     }
     
     .auth-status {
-        position: static;
+        position: static; /* No sticky en móvil, fluye */
         margin-bottom: var(--spacing-md);
         border-radius: var(--border-radius);
     }
     body {
-        padding: var(--spacing-sm);
+        padding: var(--spacing-sm); /* Menos padding en los bordes de la pantalla */
     }
 
+    /* Asegurar que los botones de cuotas no se rompan el texto si es muy largo */
     .odds-buttons button {
-        font-size: 0.85em;
+        font-size: 0.85em; /* Ligeramente más pequeños */
         padding: 8px;
     }
 
+    /* Si el panel del usuario tiene mucho contenido, ajusta su padding */
     .user-panel .card {
         padding: var(--spacing-sm);
     }
 }
 
+/* Para pantallas aún más pequeñas (principalmente celulares) */
 @media (max-width: 576px) {
     body {
         padding: var(--spacing-sm);
@@ -376,17 +393,17 @@ body {
     }
 
     .match-adder {
-        flex-direction: column;
+        flex-direction: column; /* Selector y botón uno encima del otro */
         padding-bottom: var(--spacing-sm);
     }
     .match-adder select,
     .match-adder button {
         width: 100%;
-        min-width: unset;
+        min-width: unset; /* Quita el mínimo ancho */
     }
 
     .odds-buttons {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr; /* Una columna para cada cuota en el móvil */
     }
 
     .balance {
@@ -407,28 +424,30 @@ body {
         gap: 5px;
     }
 }
+/* ... (todos tus estilos anteriores) ... */
 
 /* ========================================================= */
 /* === ESTILOS PARA EL MODAL DE DEPÓSITO === */
 /* ========================================================= */
+
 .modal-overlay {
-    position: fixed;
+    position: fixed; /* Se queda fijo en la pantalla */
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: rgba(0, 0, 0, 0.6); /* Fondo semi-transparente */
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 1000; /* Se asegura que esté por encima de todo */
     opacity: 1;
     transition: opacity 0.3s ease;
 }
 
 .modal-overlay.hidden {
     opacity: 0;
-    pointer-events: none;
+    pointer-events: none; /* No se puede interactuar cuando está oculto */
 }
 
 .modal-content {
@@ -480,16 +499,18 @@ body {
     text-align: center;
 }
 
+/* Oculta las flechas del input de tipo número en todos los navegadores */
 .deposit-form input[type=number] {
-  -moz-appearance: textfield;
-  appearance: textfield;
+  -moz-appearance: textfield; /* Para Firefox */
+  appearance: textfield; /* Estándar moderno */
 }
 
 .deposit-form input::-webkit-outer-spin-button,
 .deposit-form input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+  -webkit-appearance: none; /* Para Chrome, Safari, Edge, Opera */
+  margin: 0; /* Necesario para que funcione en Chrome */
 }
+/* ... (todos tus estilos anteriores) ... */
 .user-id-box {
     margin-top: 20px;
     padding: 10px;
@@ -507,6 +528,7 @@ body {
     text-align: center;
     box-sizing: border-box;
 }
+/* ... (todos tus estilos anteriores) ... */
 
 /* ========================================================= */
 /* === ESTILOS PARA EL FEED DE APUESTAS DEL ADMIN === */
@@ -546,56 +568,25 @@ body {
 #live-bets-list .bet-details {
     color: #555;
 }
-
 /* ========================================================= */
 /* === ESTILOS PARA LA NOTIFICACIÓN POP-UP (TOAST) === */
 /* ========================================================= */
 .toast {
-    position: fixed;
-    bottom: -100px;
+    position: fixed; /* Se mantiene fijo en la pantalla */
+    bottom: -100px; /* Comienza oculto debajo de la pantalla */
     right: 20px;
     background-color: var(--dark-gray);
     color: white;
     padding: 16px 24px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    transition: bottom 0.5s ease-in-out;
-    z-index: 2000;
+    transition: bottom 0.5s ease-in-out; /* Animación de entrada y salida */
+    z-index: 2000; /* Asegura que esté por encima de todo */
     font-size: 1em;
     font-weight: 500;
 }
 
+/* Clase que se añade con JavaScript para mostrar el pop-up */
 .toast.show {
-    bottom: 20px;
-}
-
-/* ========================================================= */
-/* === ESTILOS PARA EL CUPÓN DE APUESTAS COMBINADAS === */
-/* ========================================================= */
-
-#slip-content .bet-info-item {
-    padding: 10px;
-    border-bottom: 1px solid var(--border-color);
-    font-size: 0.9em;
-}
-
-#slip-content .bet-info-item:last-of-type {
-    border-bottom: none;
-}
-
-#slip-content .bet-info-item p {
-    margin: 2px 0;
-    color: #333;
-}
-
-#slip-content .bet-info-item .selection-name {
-    font-weight: bold;
-}
-
-#slip-summary {
-    padding: 10px;
-    background-color: #f8f9fa;
-    border-top: 2px solid var(--border-color);
-    border-bottom: 2px solid var(--border-color);
-    margin: 10px 0;
+    bottom: 20px; /* Lo mueve a una posición visible */
 }
