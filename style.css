@@ -18,16 +18,17 @@
 /* ESTILOS GENERALES Y RESET BÁSICO */
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background-color: var(--background-color);
+    background-color: var(--background-color); /* Color de respaldo si no hay imagen */
     color: var(--dark-gray);
     margin: 0;
     padding: var(--spacing-md);
     display: flex;
     justify-content: center;
-    min-height: 100vh; /* Asegura que ocupe toda la altura */
-    box-sizing: border-box; /* Incluye padding en el tamaño total */
+    min-height: 100vh;
+    box-sizing: border-box;
+    flex-direction: column;
+    align-items: center;
 }
-
 /* CONTENEDOR PRINCIPAL DE LA APLICACIÓN */
 .container {
     width: 100%;
@@ -589,4 +590,19 @@ body {
 /* Clase que se añade con JavaScript para mostrar el pop-up */
 .toast.show {
     bottom: 20px; /* Lo mueve a una posición visible */
+}
+/* --- FONDO ESPECÍFICO PARA LA PÁGINA PRINCIPAL (index.html) --- */
+.background-index {
+    background-image: url('gana.png'); /* ¡CAMBIA ESTO POR EL NOMBRE DE TU IMAGEN! */
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+/* --- FONDO PARA LAS PÁGINAS DE AUTENTICACIÓN (login, register, admin) --- */
+.auth-body {
+    background-image: url('eki.png'); /* Mantendrá el fondo original de login.html */
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
 }
