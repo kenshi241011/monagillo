@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
     <title>Panel de Administrador</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -36,6 +36,7 @@
                     <button id="stop-stream-btn" class="auth-button danger-button" style="margin-top: 20px;">Finalizar Transmisión</button>
                 </div>
                 <hr style="margin: 20px 0;">
+
                 <div id="settle-bets-control">
                     <div class="card-header">Finalizar Partido y Pagar</div>
                     <div class="form-group">
@@ -57,12 +58,39 @@
                     </div>
                     <button id="settle-bets-btn" class="auth-button success-button">Finalizar y Pagar Apuestas</button>
                 </div>
+                <hr style="margin: 20px 0;">
+
+                <div id="live-bets-feed">
+                    <div class="card-header">Apuestas en Tiempo Real</div>
+                    <ul id="live-bets-list"></ul>
                 </div>
+                <hr style="margin: 20px 0;">
+
+                <div id="user-credit-section">
+                    <div class="card-header">Acreditar Saldo a Usuario</div>
+                    <div class="form-group">
+                        <label for="search-user-id">Buscar por ID de Usuario:</label>
+                        <input type="text" id="search-user-id">
+                        <button id="search-btn" class="auth-button secondary-button">Buscar</button>
+                    </div>
+                    <div id="user-info" class="hidden">
+                        <hr>
+                        <p><strong>Usuario:</strong> <span id="user-name-info"></span></p>
+                        <p><strong>Saldo Actual:</strong> S/ <span id="user-balance-info"></span></p>
+                        <div class="form-group">
+                            <label for="deposit-amount-admin">Monto a Acreditar (S/):</label>
+                            <input type="number" id="deposit-amount-admin" placeholder="Ej: 20">
+                            <button id="credit-btn" class="auth-button">Acreditar Saldo</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="status-message">Verificando permisos...</div>
         </div>
     </div>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
-    <script src="admin.js"></script>
+    <script src="admin.js" defer></script>
 </body>
 </html>
