@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
     const liveMatchRef = db.collection('liveMatch').doc('current');
+    let searchedUser = null;
 
     // --- ELEMENTOS DEL DOM ---
     const adminContent = document.getElementById('admin-content');
@@ -24,9 +25,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeBetsBtn = document.getElementById('close-bets-btn');
     const settleBetsBtn = document.getElementById('settle-bets-btn');
     const winnerSelector = document.getElementById('winner-selector');
+    const bttsSelector = document.getElementById('btts-selector');
     const liveBetsList = document.getElementById('live-bets-list');
-    // ... (otros elementos que no cambian)
+    const toastNotification = document.getElementById('toast-notification');
+    const toastMessage = document.getElementById('toast-message');
+    const searchInput = document.getElementById('search-user-id');
+    const searchBtn = document.getElementById('search-btn');
+    const userInfo = document.getElementById('user-info');
+    const userNameInfo = document.getElementById('user-name-info');
+    const userBalanceInfo = document.getElementById('user-balance-info');
+    const depositAmountAdmin = document.getElementById('deposit-amount-admin');
+    const creditBtn = document.getElementById('credit-btn');
 
+    // --- GESTIÓN DE AUTENTICACIÓN Y PERMISOS DE ADMIN ---
     auth.onAuthStateChanged(user => {
         if (user) {
             db.collection('users').doc(user.uid).get().then(doc => {
@@ -35,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     adminContent.classList.remove('hidden');
                     listenForLiveBets();
                 } else {
+                    alert("Acceso denegado. Serás redirigido a la página principal.");
                     window.location.href = 'index.html';
                 }
             });
@@ -43,13 +55,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Iniciar o actualizar la transmisión
+    // --- LÓGICA DE CONTROL DEL PARTIDO ---
     updateStreamBtn.addEventListener('click', () => {
         const url = document.getElementById('stream-url').value.trim();
         const odds = {
             '1': parseFloat(document.getElementById('odds-1').value) || 0,
             'X': parseFloat(document.getElementById('odds-X').value) || 0,
             '2': parseFloat(document.getElementById('odds-2').value) || 0,
+            'btts_yes': parseFloat(document.getElementById('odds-btts-yes').value) || 0,
+            'btts_no': parseFloat(document.getElementById('odds-btts-no').value) || 0,
         };
         if (!url) {
             alert("Por favor, ingresa la URL de tu canal.");
@@ -65,14 +79,32 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    // Pagar apuestas (LÓGICA SIMPLIFICADA)
+    openBetsBtn.addEventListener('click', () => {
+        liveMatchRef.update({ betting_status: 'open' }).then(() => alert("Se han abierto las apuestas."));
+    });
+
+    closeBetsBtn.addEventListener('click', () => {
+        liveMatchRef.update({ betting_status: 'closed' }).then(() => alert("Se han cerrado las apuestas."));
+    });
+
+    stopStreamBtn.addEventListener('click', () => {
+        liveMatchRef.update({
+            streamUrl: null,
+            status: 'finished',
+            betting_status: 'closed'
+        }).then(() => alert("¡Transmisión finalizada!"));
+    });
+
+    // --- LÓGICA DE PAGO DE APUESTAS (PARA COMBINADAS) ---
     settleBetsBtn.addEventListener('click', async () => {
         const mainWinner = winnerSelector.value;
-        if (!mainWinner) {
-            alert("Por favor, selecciona un resultado final para el partido.");
+        const bttsWinner = bttsSelector.value;
+
+        if (!mainWinner || !bttsWinner) {
+            alert("Por favor, selecciona un resultado para AMBOS mercados.");
             return;
         }
-        if (!confirm(`¿Estás seguro de que el resultado es el correcto?`)) return;
+        if (!confirm(`¿Estás seguro de los resultados? Esta acción es irreversible.`)) return;
 
         try {
             await liveMatchRef.update({ status: 'finished', betting_status: 'closed' });
@@ -82,39 +114,79 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const batch = db.batch();
             let winnersCount = 0;
             let totalPaid = 0;
+            const userHistoryUpdates = {};
 
             betsSnapshot.forEach(doc => {
                 const bet = doc.data();
-                // Lógica de pago simple
-                if (bet.type === mainWinner) {
+                const isWinner = bet.selections.every(sel => {
+                    if (sel.market === 'main_result') return sel.type === mainWinner;
+                    if (sel.market === 'btts') return sel.type === bttsWinner;
+                    return false;
+                });
+
+                if (!userHistoryUpdates[bet.userId]) {
+                    userHistoryUpdates[bet.userId] = { history: [], winnings: 0 };
+                }
+
+                userHistoryUpdates[bet.userId].history.push({ 
+                    betId: bet.betId, 
+                    newStatus: isWinner ? 'Ganada' : 'Perdida' 
+                });
+                
+                if (isWinner) {
                     const winnings = bet.amount * bet.odd;
-                    batch.update(db.collection('users').doc(bet.userId), { 
-                        balance: firebase.firestore.FieldValue.increment(winnings) 
-                    });
+                    userHistoryUpdates[bet.userId].winnings += winnings;
                     winnersCount++;
                     totalPaid += winnings;
                 }
-                batch.delete(doc.ref);
             });
 
+            const batch = db.batch();
+
+            for (const userId in userHistoryUpdates) {
+                const userDocRef = db.collection('users').doc(userId);
+                const userDoc = await userDocRef.get();
+                if (!userDoc.exists) continue;
+
+                let currentHistory = userDoc.data().history || [];
+                userHistoryUpdates[userId].history.forEach(update => {
+                    const betIndex = currentHistory.findIndex(h => h.betId === update.betId);
+                    if (betIndex > -1) {
+                        currentHistory[betIndex].status = update.newStatus;
+                    }
+                });
+
+                batch.update(userDocRef, {
+                    history: currentHistory,
+                    balance: firebase.firestore.FieldValue.increment(userHistoryUpdates[userId].winnings)
+                });
+            }
+            
+            betsSnapshot.forEach(doc => batch.delete(doc.ref));
+
             await batch.commit();
-            alert(`¡Proceso completado!\n- Se pagaron ${winnersCount} apuestas ganadoras.\n- Monto total pagado: S/ ${totalPaid.toFixed(2)}`);
+            alert(`¡Proceso completado!\n- Se actualizaron los historiales.\n- Se pagaron ${winnersCount} apuestas ganadoras.\n- Monto total pagado: S/ ${totalPaid.toFixed(2)}`);
+
         } catch (error) {
             console.error("Error al pagar las apuestas:", error);
             alert("Ocurrió un error durante el pago automático.");
         }
     });
 
-    // El resto de funciones (abrir/cerrar apuestas, finalizar stream, buscar/acreditar usuario, etc.)
-    // se mantienen como estaban en la versión anterior.
-    
-    // --- CÓDIGO RESTANTE (SIN CAMBIOS) ---
+    // --- FUNCIONES ADICIONALES ---
     function listenForLiveBets() {
         db.collection('liveBets').orderBy('timestamp', 'desc').onSnapshot(snapshot => {
-            const liveBetsList = document.getElementById('live-bets-list');
+            snapshot.docChanges().forEach(change => {
+                if (change.type === 'added' && liveBetsList.children.length > 0 && liveBetsList.children[0].textContent !== 'Aún no se han realizado apuestas.') {
+                    const bet = change.doc.data();
+                    toastMessage.innerHTML = `<strong>${bet.userName}</strong> apostó S/ ${bet.amount.toFixed(2)}`;
+                    toastNotification.classList.add('show');
+                    setTimeout(() => toastNotification.classList.remove('show'), 5000);
+                }
+            });
+
             liveBetsList.innerHTML = '';
             if (snapshot.empty) {
                 liveBetsList.innerHTML = '<li>Aún no se han realizado apuestas.</li>';
@@ -135,52 +207,43 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    openBetsBtn.addEventListener('click', () => {
-        liveMatchRef.update({ betting_status: 'open' }).then(() => alert("Se han abierto las apuestas."));
-    });
-
-    closeBetsBtn.addEventListener('click', () => {
-        liveMatchRef.update({ betting_status: 'closed' }).then(() => alert("Se han cerrado las apuestas."));
-    });
-
-    stopStreamBtn.addEventListener('click', () => {
-        liveMatchRef.update({
-            streamUrl: null,
-            status: 'finished',
-            betting_status: 'closed'
-        }).then(() => alert("¡Transmisión finalizada!"));
-    });
-    
-    // Lógica para buscar y acreditar saldo (sin cambios)
-    const searchBtn = document.getElementById('search-btn');
-    searchBtn.addEventListener('click', async () => {
-        const searchInput = document.getElementById('search-user-id');
+    async function searchUser() {
         const userIdToFind = searchInput.value.trim();
         if (!userIdToFind) return alert("Ingresa un ID.");
-        
+        userInfo.classList.add('hidden');
+        searchedUser = null;
         try {
             const doc = await db.collection('users').doc(userIdToFind).get();
             if (doc.exists) {
-                const user = { id: doc.id, ...doc.data() };
-                document.getElementById('user-name-info').textContent = user.displayName || user.id;
-                document.getElementById('user-balance-info').textContent = (user.balance || 0).toFixed(2);
-                document.getElementById('user-info').classList.remove('hidden');
-                
-                const creditBtn = document.getElementById('credit-btn');
-                creditBtn.onclick = async () => {
-                    const amount = parseFloat(document.getElementById('deposit-amount-admin').value);
-                    if (isNaN(amount) || amount <= 0) return alert("Monto inválido.");
-                    await db.collection('users').doc(user.id).update({ 
-                        balance: firebase.firestore.FieldValue.increment(amount) 
-                    });
-                    alert('Saldo acreditado.');
-                    searchBtn.click(); // Recargar datos
-                };
+                searchedUser = { id: doc.id, ...doc.data() };
+                userNameInfo.textContent = searchedUser.displayName || doc.id;
+                userBalanceInfo.textContent = (searchedUser.balance || 0).toFixed(2);
+                userInfo.classList.remove('hidden');
             } else {
                 alert("Usuario no encontrado.");
             }
         } catch (error) {
             console.error("Error al buscar usuario:", error);
         }
-    });
+    }
+    searchBtn.addEventListener('click', searchUser);
+
+    async function creditBalance() {
+        if (!searchedUser) return alert("Primero busca un usuario.");
+        const amount = parseFloat(depositAmountAdmin.value);
+        if (isNaN(amount) || amount <= 0) return alert("Monto inválido.");
+        try {
+            await db.collection('users').doc(searchedUser.id).update({ 
+                balance: firebase.firestore.FieldValue.increment(amount) 
+            });
+            const newBalance = (searchedUser.balance || 0) + amount;
+            alert(`¡Saldo acreditado! Nuevo saldo para ${searchedUser.displayName || 'el usuario'} es S/ ${newBalance.toFixed(2)}`);
+            userBalanceInfo.textContent = newBalance.toFixed(2);
+            searchedUser.balance = newBalance;
+            depositAmountAdmin.value = '';
+        } catch (error) {
+            console.error("Error al acreditar saldo:", error);
+        }
+    }
+    creditBtn.addEventListener('click', creditBalance);
 });
