@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }).then(() => alert("¡Transmisión finalizada!"));
     });
 
-    // --- LÓGICA DE PAGO DE APUESTAS (PARA COMBINADAS) ---
+    // --- LÓGICA DE PAGO DE APUESTAS (VERSIÓN ROBUSTA) ---
     settleBetsBtn.addEventListener('click', async () => {
         const mainWinner = winnerSelector.value;
         const bttsWinner = bttsSelector.value;
@@ -120,20 +120,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             betsSnapshot.forEach(doc => {
                 const bet = doc.data();
-                const isWinner = bet.selections.every(sel => {
-                    if (sel.market === 'main_result') return sel.type === mainWinner;
-                    if (sel.market === 'btts') return sel.type === bttsWinner;
-                    return false;
-                });
+                let isWinner = false;
+
+                if (bet.selections && Array.isArray(bet.selections)) {
+                    isWinner = bet.selections.every(sel => {
+                        if (sel.market === 'main_result') return sel.type === mainWinner;
+                        if (sel.market === 'btts') return sel.type === bttsWinner;
+                        return false;
+                    });
+                }
 
                 if (!userHistoryUpdates[bet.userId]) {
                     userHistoryUpdates[bet.userId] = { history: [], winnings: 0 };
                 }
 
-                userHistoryUpdates[bet.userId].history.push({ 
-                    betId: bet.betId, 
-                    newStatus: isWinner ? 'Ganada' : 'Perdida' 
-                });
+                if (bet.betId) {
+                    userHistoryUpdates[bet.userId].history.push({ 
+                        betId: bet.betId, 
+                        newStatus: isWinner ? 'Ganada' : 'Perdida' 
+                    });
+                }
                 
                 if (isWinner) {
                     const winnings = bet.amount * bet.odd;
@@ -204,6 +210,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 liveBetsList.appendChild(li);
             });
+        }, error => {
+            console.error("Error al escuchar apuestas en vivo (Probablemente falta un índice): ", error);
+            liveBetsList.innerHTML = '<li>Error al cargar apuestas. Revisa la consola (F12) para crear el índice de Firestore.</li>';
         });
     }
     
