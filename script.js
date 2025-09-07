@@ -73,29 +73,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateHistoryUI(history = []) {
-        historyListEl.innerHTML = '';
-        if (history.length === 0) {
-            historyListEl.innerHTML = '<li>No tienes apuestas en tu historial.</li>';
-            return;
-        }
-        const sortedHistory = history.sort((a, b) => {
-            const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date();
-            const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date();
-            return dateB - dateA;
-        });
-        sortedHistory.forEach(bet => {
-            const li = document.createElement('li');
-            const betDate = bet.timestamp?.toDate ? bet.timestamp.toDate().toLocaleString('es-PE') : 'Reciente';
-            li.innerHTML = `
-                <div class="history-header">
-                    <span>Apostado: S/ ${bet.amount.toFixed(2)} a "${bet.selection}"</span>
-                    <span style="font-weight: bold;">${bet.status || 'Pendiente'}</span>
-                </div>
-                <small style="color: #888;">${betDate}</small>
-            `;
-            historyListEl.appendChild(li);
-        });
+    const historyListEl = document.getElementById('history-list');
+    historyListEl.innerHTML = '';
+    if (history.length === 0) {
+        historyListEl.innerHTML = '<li>No tienes apuestas en tu historial.</li>';
+        return;
     }
+
+    const sortedHistory = history.sort((a, b) => {
+        const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(0);
+        const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(0);
+        return dateB - dateA;
+    });
+
+    sortedHistory.forEach(bet => {
+        const li = document.createElement('li');
+        const betDate = bet.timestamp?.toDate ? bet.timestamp.toDate().toLocaleString('es-PE') : 'Reciente';
+        
+        // --- LÓGICA CORREGIDA AQUÍ ---
+        let statusClass = '';
+        let statusText = bet.status || 'Pendiente';
+
+        // Ahora reconoce "Ganada" O "Pagada" como victoria
+        if (statusText === 'Ganada' || statusText === 'Pagada') {
+            statusClass = 'status-won';
+        } else if (statusText === 'Perdida') {
+            statusClass = 'status-lost';
+        }
+
+        li.innerHTML = `
+            <div class="history-header">
+                <span>Apostado: S/ ${bet.amount.toFixed(2)} a "${bet.selection}"</span>
+                <span class="status ${statusClass}" style="font-weight: bold;">${statusText}</span>
+            </div>
+            <small style="color: #888;">${betDate}</small>
+        `;
+        historyListEl.appendChild(li);
+    });
+}
 
     function displayAdminLink(role) {
         const existingLink = document.getElementById('admin-link');
