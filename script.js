@@ -210,45 +210,55 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function placeBet() {
-        const amount = parseFloat(document.getElementById('bet-amount').value);
-        if (!amount || !currentBet || amount <= 0 || amount > balance) {
-            alert("Monto inválido o saldo insuficiente.");
-            return;
-        }
-        try {
-            await db.collection('liveBets').add({
-                userId: currentUser.uid,
-                userName: currentUser.displayName || currentUser.email,
-                amount: amount,
-                odd: currentBet.odd,
-                selection: currentBet.selection,
-                type: currentBet.type,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-            const historyEntry = {
-                amount: amount,
-                odd: currentBet.odd,
-                selection: currentBet.selection,
-                status: 'Pendiente',
-                timestamp: new Date()
-            };
-
-            const newBalance = balance - amount;
-            await db.collection('users').doc(currentUser.uid).update({
-                balance: newBalance,
-                history: firebase.firestore.FieldValue.arrayUnion(historyEntry)
-            });
-
-            alert(`Apuesta realizada por S/ ${amount.toFixed(2)}.`);
-            currentBet = null;
-            document.querySelectorAll('.odds-buttons button.selected').forEach(btn => btn.classList.remove('selected'));
-            updateBetSlip();
-        } catch (error) {
-            console.error("Error al realizar la apuesta:", error);
-            alert("Hubo un problema al registrar tu apuesta.");
-        }
+    const amount = parseFloat(document.getElementById('bet-amount').value);
+    if (!amount || !currentBet || amount <= 0 || amount > balance) {
+        alert("Monto inválido o saldo insuficiente.");
+        return;
     }
+
+    // --- CAMBIO AQUÍ: Creamos una referencia para obtener un ID único ---
+    const newBetRef = db.collection('liveBets').doc();
+    const betId = newBetRef.id;
+
+    try {
+        // Guardamos la apuesta en la colección general para el admin
+        await newBetRef.set({
+            betId: betId, // Guardamos el ID único
+            userId: currentUser.uid,
+            userName: currentUser.displayName || currentUser.email,
+            amount: amount,
+            odd: currentBet.odd,
+            selection: currentBet.selection,
+            type: currentBet.type,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Guardamos la apuesta en el historial del usuario, incluyendo el betId
+        const historyEntry = {
+            betId: betId, // Guardamos el ID único también aquí
+            amount: amount,
+            odd: currentBet.odd,
+            selection: currentBet.selection,
+            type: currentBet.type, // Guardamos el tipo para la lógica de pago
+            status: 'Pendiente',
+            timestamp: new Date()
+        };
+
+        const newBalance = balance - amount;
+        await db.collection('users').doc(currentUser.uid).update({
+            balance: firebase.firestore.FieldValue.increment(-amount), // Usamos increment para más seguridad
+            history: firebase.firestore.FieldValue.arrayUnion(historyEntry)
+        });
+
+        alert(`Apuesta realizada por S/ ${amount.toFixed(2)}.`);
+        currentBet = null;
+        document.querySelectorAll('.odds-buttons button.selected').forEach(btn => btn.classList.remove('selected'));
+        updateBetSlip();
+    } catch (error) {
+        console.error("Error al realizar la apuesta:", error);
+        alert("Hubo un problema al registrar tu apuesta.");
+    }
+}
 
     function startBettingTimer(durationInSeconds) {
         if (countdownInterval) clearInterval(countdownInterval);

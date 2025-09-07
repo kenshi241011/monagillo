@@ -593,7 +593,7 @@ body {
 }
 /* --- FONDO ESPECÍFICO PARA LA PÁGINA PRINCIPAL (index.html) --- */
 .background-index {
-    background-image: url('gana.png'); /* ¡CAMBIA ESTO POR EL NOMBRE DE TU IMAGEN! */
+    background-image: url('gana.png'); 
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
@@ -601,8 +601,16 @@ body {
 
 /* --- FONDO PARA LAS PÁGINAS DE AUTENTICACIÓN (login, register, admin) --- */
 .auth-body {
-    background-image: url('eki.png'); /* Mantendrá el fondo original de login.html */
+    background-image: url('eki.png'); 
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
+}
+/* --- ESTILOS PARA EL HISTORIAL DE APUESTAS --- */
+.status.status-won {
+    color: #28a745; 
+}
+
+.status.status-lost {
+    color: #dc3545; 
 }
