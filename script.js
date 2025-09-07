@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- VARIABLES DE ESTADO ---
     let balance = 0;
-    let betSlipSelections = []; // <-- Usamos un array para apuestas combinadas
+    let betSlipSelections = [];
     let countdownInterval = null;
 
     // --- ELEMENTOS DEL DOM ---
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = doc.data();
                 balance = data.balance || 0;
                 displayAdminLink(data.role);
-                updateHistoryUI(data.history || []);
+                updateHistoryUI(data.history); // <-- Llamamos a la función
             } else {
                 balance = 1000;
                 db.collection('users').doc(currentUser.uid).set({
@@ -75,16 +75,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function updateHistoryUI(history = []) {
+    // --- FUNCIÓN DEL HISTORIAL CORREGIDA ---
+    function updateHistoryUI(history) {
         historyListEl.innerHTML = '';
-        if (history.length === 0) {
+
+        // Verificación para asegurar que el historial es un array
+        if (!Array.isArray(history) || history.length === 0) {
             historyListEl.innerHTML = '<li>No tienes apuestas en tu historial.</li>';
             return;
         }
-        const sortedHistory = history.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
+
+        // Lógica de ordenamiento más segura
+        const sortedHistory = history.sort((a, b) => {
+            const dateB = b.timestamp?.toDate ? b.timestamp.toDate().getTime() : 0;
+            const dateA = a.timestamp?.toDate ? a.timestamp.toDate().getTime() : 0;
+            return dateB - dateA;
+        });
+
         sortedHistory.forEach(bet => {
             const li = document.createElement('li');
             const betDate = bet.timestamp?.toDate ? bet.timestamp.toDate().toLocaleString('es-PE') : 'Reciente';
+            
             let statusClass = '';
             let statusText = bet.status || 'Pendiente';
             if (statusText === 'Ganada' || statusText === 'Pagada') {
@@ -92,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (statusText === 'Perdida') {
                 statusClass = 'status-lost';
             }
+
             li.innerHTML = `
                 <div class="history-header">
                     <span>Apostado: S/ ${bet.amount.toFixed(2)} a "${bet.selection}"</span>
