@@ -8,6 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
+    <link rel="manifest" href="manifest.json">
 </head>
 <body class="background-index">
     <div class="container">
@@ -53,5 +54,18 @@
     </div>
     
     <script src="script.js" defer></script>
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => {
+                    console.log('ServiceWorker registrado con éxito:', registration.scope);
+                })
+                .catch(error => {
+                    console.log('Fallo en el registro de ServiceWorker:', error);
+                });
+        });
+    }
+</script>
 </body>
 </html>
